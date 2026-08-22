@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+build/
+
+# Testing
+coverage/
+
+# Turborepo
+.turbo/
+
+# Vite
+.vite/
+
+# Next.js
+.next/
+
+# Drizzle
+.drizzle/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
