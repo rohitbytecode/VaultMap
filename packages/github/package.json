@@ -8,5 +8,9 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vaultmap/types": "workspace:*",
+    "octokit": "^5.0.5"
   }
 }
