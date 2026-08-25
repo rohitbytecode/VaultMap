@@ -35,7 +35,7 @@ interface ScanResult {
   };
 }
 
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:6770';
 
 function App() {
   const [url, setUrl] = useState('');
