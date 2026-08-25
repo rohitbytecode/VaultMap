@@ -7,10 +7,15 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@vaultmap/types": "workspace:*",
     "octokit": "^5.0.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.12",
+    "vitest": "^4.1.11"
   }
 }

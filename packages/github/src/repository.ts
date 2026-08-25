@@ -12,8 +12,8 @@ export async function getRepository(
   });
 
   return {
-    owner: data.owner.login,
-    name: data.name,
+    owner,
+    name,
     url: data.html_url,
     defaultBranch: data.default_branch,
   };
