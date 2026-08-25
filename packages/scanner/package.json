@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@vaultmap/github": "workspace:*",
     "@vaultmap/types": "workspace:*"
   },
   "devDependencies": {

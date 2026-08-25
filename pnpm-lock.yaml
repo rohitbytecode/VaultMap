@@ -105,6 +105,9 @@ importers:
 
   packages/scanner:
     dependencies:
+      '@vaultmap/github':
+        specifier: workspace:*
+        version: link:../github
       '@vaultmap/types':
         specifier: workspace:*
         version: link:../types
