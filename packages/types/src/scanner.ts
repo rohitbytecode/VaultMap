@@ -8,5 +8,6 @@ export interface ScanResult {
 export interface RepositoryStatistics {
   totalFiles: number;
   totalDirectories: number;
+  totalSize: number;
   extensions: Record<string, number>;
 }

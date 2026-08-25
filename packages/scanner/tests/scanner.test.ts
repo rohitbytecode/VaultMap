@@ -108,6 +108,7 @@ describe('scanRepository', () => {
         '.tsx': 1,
         '.md': 1,
       },
+      totalSize: 0,
     });
   });
 
@@ -126,5 +127,27 @@ describe('scanRepository', () => {
       extension: '.ts',
       size: 512,
     });
+  });
+
+  it('calculates total repository size', () => {
+    const result = scanRepository(repository, [
+      {
+        path: 'src/index.ts',
+        type: 'blob',
+        size: 100,
+      },
+      {
+        path: 'src/App.tsx',
+        type: 'blob',
+        size: 250,
+      },
+      {
+        path: 'README.md',
+        type: 'blob',
+        size: 50,
+      },
+    ]);
+
+    expect(result.statistics.totalSize).toBe(400);
   });
 });

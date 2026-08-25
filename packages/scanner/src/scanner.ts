@@ -73,7 +73,13 @@ function createStatistics(
 ): RepositoryStatistics {
   const extensions: Record<string, number> = {};
 
+  let totalSize = 0;
+
   for (const file of files) {
+    if (file.size !== undefined) {
+      totalSize += file.size;
+    }
+
     if (!file.extension) {
       continue;
     }
@@ -83,6 +89,7 @@ function createStatistics(
   return {
     totalFiles: files.length,
     totalDirectories: directories.length,
+    totalSize,
     extensions,
   };
 }
