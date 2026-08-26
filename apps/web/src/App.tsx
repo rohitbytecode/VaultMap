@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import type { RepositoryTreeNode } from '@vaultmap/types';
+import RepositoryTree from './components/RepositoryTree';
 
 import './App.css';
 
@@ -33,6 +35,7 @@ interface ScanResult {
     totalSize: number;
     extensions: Record<string, number>;
   };
+  tree: RepositoryTreeNode[];
 }
 
 const API_URL = 'http://localhost:6770';
@@ -184,6 +187,15 @@ function App() {
                 <p className="muted">
                   Showing first 100 of {result.snapshot.files.length} files.
                 </p>
+              )}
+            </section>
+
+            <section className="panel">
+              <h3>Repository structure</h3>
+              {result.tree.length > 0 ? (
+                <RepositoryTree nodes={result.tree} />
+              ) : (
+                <p className="muted">Repository is empty.</p>
               )}
             </section>
           </div>

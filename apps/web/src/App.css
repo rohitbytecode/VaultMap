@@ -199,3 +199,28 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.repository-tree {
+  font-family: monospace;
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+}
+
+.tree-node-name {
+  overflow-wrap: anywhere;
+}
+
+.tree-node-size {
+  margin-left: auto;
+  color: #777;
+  font-size: 0.8rem;
+}
+
+.tree-node-children {
+  margin-left: 1.25rem;
+}
