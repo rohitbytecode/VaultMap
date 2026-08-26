@@ -1,8 +1,25 @@
 import { useState } from 'react';
+import { Copy, Check } from 'lucide-react';
 import type { RepositoryTreeNode } from '@vaultmap/types';
 import RepositoryTree from './components/RepositoryTree';
 
 import './App.css';
+
+function generateTreeText(nodes: RepositoryTreeNode[], prefix = ''): string {
+  let text = '';
+  nodes.forEach((node, index) => {
+    const isLast = index === nodes.length - 1;
+    const connector = isLast ? '└── ' : '├── ';
+
+    text += `${prefix}${connector}${node.name}${node.type === 'directory' ? '/' : ''}\n`;
+
+    if (node.type === 'directory' && node.children && node.children.length > 0) {
+      const childPrefix = prefix + (isLast ? '    ' : '│   ');
+      text += generateTreeText(node.children, childPrefix);
+    }
+  });
+  return text;
+}
 
 interface Repository {
   owner: string;
@@ -45,6 +62,15 @@ function App() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopyTree = () => {
+    if (!result?.tree) return;
+    const text = generateTreeText(result.tree);
+    navigator.clipboard.writeText(text);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -191,7 +217,18 @@ function App() {
             </section>
 
             <section className="panel">
-              <h3>Repository structure</h3>
+              <header className="panel-header">
+                <h3>Repository structure</h3>
+                {result.tree.length > 0 && (
+                  <button
+                    className="icon-button"
+                    onClick={handleCopyTree}
+                    title="Copy structure to clipboard"
+                  >
+                    {isCopied ? <Check size={16} className="success-icon" /> : <Copy size={16} />}
+                  </button>
+                )}
+              </header>
               {result.tree.length > 0 ? (
                 <RepositoryTree nodes={result.tree} />
               ) : (

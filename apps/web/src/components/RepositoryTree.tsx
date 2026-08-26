@@ -1,4 +1,5 @@
 import type { RepositoryTreeNode } from '@vaultmap/types';
+import { Folder, FileText } from 'lucide-react';
 
 interface RepositoryTreeProps {
   nodes: RepositoryTreeNode[];
@@ -24,7 +25,9 @@ function TreeNode({ node }: TreeNodeProps) {
   return (
     <div className="tree-node">
       <div className="tree-node-content">
-        <span className="tree-node-icon">{isDirectory ? '📁' : '📄'}</span>
+        <span className={`tree-node-icon ${!isDirectory ? 'file-icon' : ''}`}>
+          {isDirectory ? <Folder size={16} /> : <FileText size={16} />}
+        </span>
 
         <span className="tree-node-name">{node.name}</span>
 
