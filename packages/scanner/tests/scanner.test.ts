@@ -150,4 +150,45 @@ describe('scanRepository', () => {
 
     expect(result.statistics.totalSize).toBe(400);
   });
+
+  it('builds the repository tree', () => {
+    const result = scanRepository(repository, [
+      {
+        path: 'src',
+        type: 'tree',
+      },
+      {
+        path: 'src/index.ts',
+        type: 'blob',
+      },
+      {
+        path: 'README.md',
+        type: 'blob',
+      },
+    ]);
+
+    expect(result.tree).toEqual([
+      {
+        name: 'src',
+        path: 'src',
+        type: 'directory',
+        children: [
+          {
+            name: 'index.ts',
+            path: 'src/index.ts',
+            type: 'file',
+            children: [],
+            extension: '.ts',
+          },
+        ],
+      },
+      {
+        name: 'README.md',
+        path: 'README.md',
+        type: 'file',
+        children: [],
+        extension: '.md',
+      },
+    ]);
+  });
 });

@@ -7,15 +7,16 @@ import {
   RepositorySnapshot,
   ScanResult,
 } from '@vaultmap/types';
+import { buildRepositoryTree } from './tree.js';
 
 export function scanRepository(
   repository: GitHubRepository,
-  tree: GitHubTreeEntry[],
+  entries: GitHubTreeEntry[],
 ): ScanResult {
   const files: RepositoryFile[] = [];
   const directories: RepositoryDirectory[] = [];
 
-  for (const entry of tree) {
+  for (const entry of entries) {
     const name = getEntryName(entry.path);
 
     if (entry.type === 'tree') {
@@ -45,9 +46,12 @@ export function scanRepository(
     directories,
   };
 
+  const tree = buildRepositoryTree(files, directories);
+
   return {
     snapshot,
     statistics,
+    tree,
   };
 }
 

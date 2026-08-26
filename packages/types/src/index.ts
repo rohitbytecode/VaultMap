@@ -7,3 +7,5 @@ export type {
 } from './repository.js';
 
 export type { ScanResult, RepositoryStatistics } from './scanner.js';
+
+export type { RepositoryTreeNode } from './tree.js';
