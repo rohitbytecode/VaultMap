@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Copy, Check } from 'lucide-react';
 import type { RepositoryTreeNode } from '@vaultmap/types';
 import RepositoryTree from './components/RepositoryTree';
@@ -13,7 +13,11 @@ function generateTreeText(nodes: RepositoryTreeNode[], prefix = ''): string {
 
     text += `${prefix}${connector}${node.name}${node.type === 'directory' ? '/' : ''}\n`;
 
-    if (node.type === 'directory' && node.children && node.children.length > 0) {
+    if (
+      node.type === 'directory' &&
+      node.children &&
+      node.children.length > 0
+    ) {
       const childPrefix = prefix + (isLast ? '    ' : '│   ');
       text += generateTreeText(node.children, childPrefix);
     }
@@ -56,6 +60,7 @@ interface ScanResult {
 }
 
 const API_URL = 'http://localhost:6770';
+const FILES_PER_PAGE = 100;
 
 function App() {
   const [url, setUrl] = useState('');
@@ -63,6 +68,7 @@ function App() {
   const [error, setError] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [filePage, setFilePage] = useState(1);
 
   const handleCopyTree = () => {
     if (!result?.tree) return;
@@ -72,11 +78,26 @@ function App() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const totalFilePages = result
+    ? Math.ceil(result.snapshot.files.length / FILES_PER_PAGE)
+    : 0;
+
+  const paginatedFiles = useMemo(() => {
+    if (!result) {
+      return [];
+    }
+
+    const start = (filePage - 1) * FILES_PER_PAGE;
+
+    return result.snapshot.files.slice(start, start + FILES_PER_PAGE);
+  }, [result, filePage]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError('');
     setResult(null);
+    setIsScanning(true);
     setIsScanning(true);
 
     try {
@@ -194,11 +215,25 @@ function App() {
               </div>
             </section>
 
-            <section className="panel">
-              <h3>Repository files</h3>
+            <section className="panel repository-files-panel">
+              <header className="panel-header">
+                <div>
+                  <h3>Repository files</h3>
+
+                  <p className="muted">
+                    {result.snapshot.files.length.toLocaleString()} files
+                  </p>
+                </div>
+
+                {totalFilePages > 1 && (
+                  <span className="file-page-indicator">
+                    Page {filePage} of {totalFilePages}
+                  </span>
+                )}
+              </header>
 
               <div className="file-list">
-                {result.snapshot.files.slice(0, 100).map((file) => (
+                {paginatedFiles.map((file) => (
                   <div className="file" key={file.path}>
                     <span>{file.path}</span>
 
@@ -209,10 +244,49 @@ function App() {
                 ))}
               </div>
 
-              {result.snapshot.files.length > 100 && (
-                <p className="muted">
-                  Showing first 100 of {result.snapshot.files.length} files.
-                </p>
+              {totalFilePages > 1 && (
+                <nav
+                  className="file-pagination"
+                  aria-label="Repository files pagination"
+                >
+                  <button
+                    type="button"
+                    disabled={filePage === 1}
+                    onClick={() => setFilePage(1)}
+                  >
+                    First
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={filePage === 1}
+                    onClick={() => setFilePage((page) => Math.max(1, page - 1))}
+                  >
+                    Previous
+                  </button>
+
+                  <span>
+                    {filePage} / {totalFilePages}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={filePage === totalFilePages}
+                    onClick={() =>
+                      setFilePage((page) => Math.min(totalFilePages, page + 1))
+                    }
+                  >
+                    Next
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={filePage === totalFilePages}
+                    onClick={() => setFilePage(totalFilePages)}
+                  >
+                    Last
+                  </button>
+                </nav>
               )}
             </section>
 
@@ -225,7 +299,11 @@ function App() {
                     onClick={handleCopyTree}
                     title="Copy structure to clipboard"
                   >
-                    {isCopied ? <Check size={16} className="success-icon" /> : <Copy size={16} />}
+                    {isCopied ? (
+                      <Check size={16} className="success-icon" />
+                    ) : (
+                      <Copy size={16} />
+                    )}
                   </button>
                 )}
               </header>
