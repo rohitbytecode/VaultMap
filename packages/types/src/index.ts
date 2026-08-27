@@ -9,3 +9,5 @@ export type {
 export type { ScanResult, RepositoryStatistics } from './scanner.js';
 
 export type { RepositoryTreeNode } from './tree.js';
+
+export type { RepositoryFileContent } from './file.js';

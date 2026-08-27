@@ -1,28 +1,40 @@
 import { useState, useMemo } from 'react';
 import { Copy, Check } from 'lucide-react';
-import type { RepositoryTreeNode } from '@vaultmap/types';
+
+import type {
+  RepositoryTreeNode,
+  RepositoryFileContent,
+} from '@vaultmap/types';
+
 import RepositoryTree from './components/RepositoryTree';
+import FileViewer from './components/FileViewer';
 
 import './App.css';
 
 function generateTreeText(nodes: RepositoryTreeNode[], prefix = ''): string {
   let text = '';
+
   nodes.forEach((node, index) => {
     const isLast = index === nodes.length - 1;
     const connector = isLast ? '└── ' : '├── ';
 
     text += `${prefix}${connector}${node.name}${node.type === 'directory' ? '/' : ''}\n`;
 
-    if (
-      node.type === 'directory' &&
-      node.children &&
-      node.children.length > 0
-    ) {
-      const childPrefix = prefix + (isLast ? '    ' : '│   ');
-      text += generateTreeText(node.children, childPrefix);
+    if (node.type === 'directory' && node.children?.length) {
+      text += generateTreeText(
+        node.children,
+        prefix + (isLast ? '    ' : '│   '),
+      );
     }
   });
+
   return text;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 interface Repository {
@@ -69,28 +81,30 @@ function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [filePage, setFilePage] = useState(1);
-
-  const handleCopyTree = () => {
-    if (!result?.tree) return;
-    const text = generateTreeText(result.tree);
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
+  const [selectedFile, setSelectedFile] =
+    useState<RepositoryFileContent | null>(null);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   const totalFilePages = result
     ? Math.ceil(result.snapshot.files.length / FILES_PER_PAGE)
     : 0;
 
   const paginatedFiles = useMemo(() => {
-    if (!result) {
-      return [];
-    }
-
+    if (!result) return [];
     const start = (filePage - 1) * FILES_PER_PAGE;
-
     return result.snapshot.files.slice(start, start + FILES_PER_PAGE);
   }, [result, filePage]);
+
+  async function handleCopyTree() {
+    if (!result?.tree) return;
+    try {
+      await navigator.clipboard.writeText(generateTreeText(result.tree));
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable or permission denied.
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,14 +112,12 @@ function App() {
     setError('');
     setResult(null);
     setIsScanning(true);
-    setIsScanning(true);
+    setFilePage(1);
 
     try {
       const response = await fetch(`${API_URL}/api/repositories/scan`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
 
@@ -116,12 +128,46 @@ function App() {
       }
 
       setResult(data);
-    } catch (error) {
+    } catch (err) {
       setError(
-        error instanceof Error ? error.message : 'Failed to scan repository',
+        err instanceof Error ? err.message : 'Failed to scan repository',
       );
     } finally {
       setIsScanning(false);
+    }
+  }
+
+  async function handleFileSelect(path: string) {
+    if (!result) return;
+
+    setIsLoadingFile(true);
+    setSelectedFile(null);
+    setError('');
+
+    const { owner, name, defaultBranch } = result.snapshot.repository;
+
+    try {
+      const params = new URLSearchParams({
+        owner,
+        repository: name,
+        path,
+        branch: defaultBranch,
+      });
+
+      const response = await fetch(
+        `${API_URL}/api/repositories/file?${params.toString()}`,
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Failed to load file');
+      }
+
+      setSelectedFile(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load file');
+    } finally {
+      setIsLoadingFile(false);
     }
   }
 
@@ -193,9 +239,7 @@ function App() {
 
             <article>
               <span>Total size</span>
-              <strong>
-                {(result.statistics.totalSize / 1024 / 1024).toFixed(2)} MB
-              </strong>
+              <strong>{formatFileSize(result.statistics.totalSize)}</strong>
             </article>
           </div>
 
@@ -234,13 +278,18 @@ function App() {
 
               <div className="file-list">
                 {paginatedFiles.map((file) => (
-                  <div className="file" key={file.path}>
+                  <button
+                    type="button"
+                    className="file"
+                    key={file.path}
+                    onClick={() => void handleFileSelect(file.path)}
+                  >
                     <span>{file.path}</span>
 
                     {file.size !== undefined && (
-                      <small>{(file.size / 1024).toFixed(1)} KB</small>
+                      <small>{formatFileSize(file.size)}</small>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -260,7 +309,7 @@ function App() {
                   <button
                     type="button"
                     disabled={filePage === 1}
-                    onClick={() => setFilePage((page) => Math.max(1, page - 1))}
+                    onClick={() => setFilePage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </button>
@@ -273,7 +322,7 @@ function App() {
                     type="button"
                     disabled={filePage === totalFilePages}
                     onClick={() =>
-                      setFilePage((page) => Math.min(totalFilePages, page + 1))
+                      setFilePage((p) => Math.min(totalFilePages, p + 1))
                     }
                   >
                     Next
@@ -293,10 +342,12 @@ function App() {
             <section className="panel">
               <header className="panel-header">
                 <h3>Repository structure</h3>
+
                 {result.tree.length > 0 && (
                   <button
+                    type="button"
                     className="icon-button"
-                    onClick={handleCopyTree}
+                    onClick={() => void handleCopyTree()}
                     title="Copy structure to clipboard"
                   >
                     {isCopied ? (
@@ -307,12 +358,35 @@ function App() {
                   </button>
                 )}
               </header>
+
               {result.tree.length > 0 ? (
-                <RepositoryTree nodes={result.tree} />
+                <RepositoryTree
+                  nodes={result.tree}
+                  onFileSelect={(node) => {
+                    if (node.type === 'file') {
+                      void handleFileSelect(node.path);
+                    }
+                  }}
+                />
               ) : (
                 <p className="muted">Repository is empty.</p>
               )}
             </section>
+
+            {isLoadingFile && (
+              <section className="panel file-viewer-loading">
+                Loading file...
+              </section>
+            )}
+
+            {selectedFile && !isLoadingFile && (
+              <FileViewer
+                file={selectedFile}
+                repositoryUrl={result.snapshot.repository.url}
+                branch={result.snapshot.repository.defaultBranch}
+                onClose={() => setSelectedFile(null)}
+              />
+            )}
           </div>
         </section>
       )}

@@ -5,6 +5,7 @@ import { FileIcon, FolderIcon } from '@react-symbols/icons/utils';
 
 interface RepositoryTreeProps {
   nodes: RepositoryTreeNode[];
+  onFileSelect?: (node: RepositoryTreeNode) => void;
 }
 
 interface TreeNodeProps {

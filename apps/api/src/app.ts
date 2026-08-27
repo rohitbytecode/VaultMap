@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 
 import { repositoryRouter } from './routes/repository.js';
+import { fileRouter } from './routes/file.js';
 
 export const app = express();
 
@@ -21,3 +22,4 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/repositories', repositoryRouter);
+app.use('/api/repositories/file', fileRouter);
