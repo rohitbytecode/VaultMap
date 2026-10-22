@@ -5,3 +5,4 @@ coverage
 .turbo
 .next
 .drizzle
+pnpm-lock.yaml
