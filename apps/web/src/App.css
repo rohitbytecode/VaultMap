@@ -37,6 +37,12 @@
   letter-spacing: 0.22em;
   color: var(--accent);
   text-transform: uppercase;
+}
+
+.hero .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 5px 12px 5px 8px;
   background: var(--accent-subtle);
   border: 1px solid var(--border-accent);
@@ -44,7 +50,7 @@
   animation: eyebrow-glow 3s ease-in-out infinite alternate;
 }
 
-.eyebrow::before {
+.hero .eyebrow::before {
   content: '';
   width: 6px;
   height: 6px;
