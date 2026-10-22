@@ -49,7 +49,14 @@
 }
 
 html {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   font-size: 14px;
   color: var(--text-primary);
   background: var(--bg-color);
@@ -75,7 +82,11 @@ body::before {
   transform: translateX(-50%);
   width: 80%;
   height: 60%;
-  background: radial-gradient(ellipse, rgba(129, 140, 248, 0.08) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse,
+    rgba(129, 140, 248, 0.08) 0%,
+    transparent 70%
+  );
   pointer-events: none;
   z-index: -1;
   animation: ambient-pulse 8s ease-in-out infinite alternate;
@@ -88,27 +99,53 @@ body::after {
   right: -10%;
   width: 50%;
   height: 50%;
-  background: radial-gradient(ellipse, rgba(34, 211, 238, 0.04) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse,
+    rgba(34, 211, 238, 0.04) 0%,
+    transparent 70%
+  );
   pointer-events: none;
   z-index: -1;
   animation: ambient-drift 12s ease-in-out infinite alternate;
 }
 
 @keyframes ambient-pulse {
-  0% { opacity: 0.6; transform: translateX(-50%) scale(1); }
-  100% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+  0% {
+    opacity: 0.6;
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.1);
+  }
 }
 
 @keyframes ambient-drift {
-  0% { opacity: 0.5; transform: translate(0, 0); }
-  100% { opacity: 0.8; transform: translate(-5%, 5%); }
+  0% {
+    opacity: 0.5;
+    transform: translate(0, 0);
+  }
+  100% {
+    opacity: 0.8;
+    transform: translate(-5%, 5%);
+  }
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
 
 ::selection {
   background: rgba(129, 140, 248, 0.25);

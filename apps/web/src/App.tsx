@@ -173,234 +173,234 @@ function App() {
 
   return (
     <>
-    <main className="app">
-      <section className="hero">
-        <p className="eyebrow">VAULTMAP</p>
+      <main className="app">
+        <section className="hero">
+          <p className="eyebrow">VAULTMAP</p>
 
-        <h1>Understand any repository.</h1>
+          <h1>Understand any repository.</h1>
 
-        <p className="subtitle">
-          Scan a public GitHub repository and explore its structure, files,
-          directories, and technology footprint.
-        </p>
+          <p className="subtitle">
+            Scan a public GitHub repository and explore its structure, files,
+            directories, and technology footprint.
+          </p>
 
-        <form className="scan-form" onSubmit={handleSubmit}>
-          <input
-            type="url"
-            placeholder="https://github.com/rohitbytecode/bmtech"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            required
-          />
+          <form className="scan-form" onSubmit={handleSubmit}>
+            <input
+              type="url"
+              placeholder="https://github.com/rohitbytecode/bmtech"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              required
+            />
 
-          <button type="submit" disabled={isScanning}>
-            Scan Repository
-          </button>
-        </form>
+            <button type="submit" disabled={isScanning}>
+              Scan Repository
+            </button>
+          </form>
 
-        {isScanning && (
-          <div className="scan-status">
-            <span className="scan-status-dot" />
-            <span>Scanning repository...</span>
-          </div>
-        )}
+          {isScanning && (
+            <div className="scan-status">
+              <span className="scan-status-dot" />
+              <span>Scanning repository...</span>
+            </div>
+          )}
 
-        {error && <p className="error">{error}</p>}
-      </section>
+          {error && <p className="error">{error}</p>}
+        </section>
 
-      {result && (
-        <section className="results">
-          <header className="repository-header">
-            <div>
-              <p className="eyebrow">REPOSITORY</p>
+        {result && (
+          <section className="results">
+            <header className="repository-header">
+              <div>
+                <p className="eyebrow">REPOSITORY</p>
 
-              <h2>
-                {result.snapshot.repository.owner}/
-                {result.snapshot.repository.name}
-              </h2>
+                <h2>
+                  {result.snapshot.repository.owner}/
+                  {result.snapshot.repository.name}
+                </h2>
 
-              <p>
-                Default branch:{' '}
-                <strong>{result.snapshot.repository.defaultBranch}</strong>
-              </p>
+                <p>
+                  Default branch:{' '}
+                  <strong>{result.snapshot.repository.defaultBranch}</strong>
+                </p>
+              </div>
+
+              <a
+                href={result.snapshot.repository.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View on GitHub →
+              </a>
+            </header>
+
+            <div className="stats">
+              <article>
+                <span>Files</span>
+                <strong>{result.statistics.totalFiles}</strong>
+              </article>
+
+              <article>
+                <span>Directories</span>
+                <strong>{result.statistics.totalDirectories}</strong>
+              </article>
+
+              <article>
+                <span>Total size</span>
+                <strong>{formatFileSize(result.statistics.totalSize)}</strong>
+              </article>
             </div>
 
-            <a
-              href={result.snapshot.repository.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on GitHub →
-            </a>
-          </header>
+            <div className="content-grid">
+              <section className="panel">
+                <header className="panel-header">
+                  <h3>File extensions</h3>
+                </header>
 
-          <div className="stats">
-            <article>
-              <span>Files</span>
-              <strong>{result.statistics.totalFiles}</strong>
-            </article>
+                <div className="extensions">
+                  {Object.entries(result.statistics.extensions)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([extension, count]) => (
+                      <div className="extension" key={extension}>
+                        <span>{extension}</span>
+                        <strong>{count}</strong>
+                      </div>
+                    ))}
+                </div>
+              </section>
 
-            <article>
-              <span>Directories</span>
-              <strong>{result.statistics.totalDirectories}</strong>
-            </article>
+              <section className="panel repository-files-panel">
+                <header className="panel-header">
+                  <div>
+                    <h3>Repository files</h3>
 
-            <article>
-              <span>Total size</span>
-              <strong>{formatFileSize(result.statistics.totalSize)}</strong>
-            </article>
-          </div>
+                    <p className="muted">
+                      {result.snapshot.files.length.toLocaleString()} files
+                    </p>
+                  </div>
 
-          <div className="content-grid">
-            <section className="panel">
-              <header className="panel-header">
-                <h3>File extensions</h3>
-              </header>
+                  {totalFilePages > 1 && (
+                    <span className="file-page-indicator">
+                      Page {filePage} of {totalFilePages}
+                    </span>
+                  )}
+                </header>
 
-              <div className="extensions">
-                {Object.entries(result.statistics.extensions)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([extension, count]) => (
-                    <div className="extension" key={extension}>
-                      <span>{extension}</span>
-                      <strong>{count}</strong>
-                    </div>
+                <div className="file-list">
+                  {paginatedFiles.map((file) => (
+                    <button
+                      type="button"
+                      className="file"
+                      key={file.path}
+                      onClick={() => void handleFileSelect(file.path)}
+                    >
+                      <span>{file.path}</span>
+
+                      {file.size !== undefined && (
+                        <small>{formatFileSize(file.size)}</small>
+                      )}
+                    </button>
                   ))}
-              </div>
-            </section>
-
-            <section className="panel repository-files-panel">
-              <header className="panel-header">
-                <div>
-                  <h3>Repository files</h3>
-
-                  <p className="muted">
-                    {result.snapshot.files.length.toLocaleString()} files
-                  </p>
                 </div>
 
                 {totalFilePages > 1 && (
-                  <span className="file-page-indicator">
-                    Page {filePage} of {totalFilePages}
-                  </span>
+                  <nav
+                    className="file-pagination"
+                    aria-label="Repository files pagination"
+                  >
+                    <button
+                      type="button"
+                      disabled={filePage === 1}
+                      onClick={() => setFilePage(1)}
+                    >
+                      First
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={filePage === 1}
+                      onClick={() => setFilePage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </button>
+
+                    <span>
+                      {filePage} / {totalFilePages}
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={filePage === totalFilePages}
+                      onClick={() =>
+                        setFilePage((p) => Math.min(totalFilePages, p + 1))
+                      }
+                    >
+                      Next
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={filePage === totalFilePages}
+                      onClick={() => setFilePage(totalFilePages)}
+                    >
+                      Last
+                    </button>
+                  </nav>
                 )}
-              </header>
-
-              <div className="file-list">
-                {paginatedFiles.map((file) => (
-                  <button
-                    type="button"
-                    className="file"
-                    key={file.path}
-                    onClick={() => void handleFileSelect(file.path)}
-                  >
-                    <span>{file.path}</span>
-
-                    {file.size !== undefined && (
-                      <small>{formatFileSize(file.size)}</small>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {totalFilePages > 1 && (
-                <nav
-                  className="file-pagination"
-                  aria-label="Repository files pagination"
-                >
-                  <button
-                    type="button"
-                    disabled={filePage === 1}
-                    onClick={() => setFilePage(1)}
-                  >
-                    First
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={filePage === 1}
-                    onClick={() => setFilePage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </button>
-
-                  <span>
-                    {filePage} / {totalFilePages}
-                  </span>
-
-                  <button
-                    type="button"
-                    disabled={filePage === totalFilePages}
-                    onClick={() =>
-                      setFilePage((p) => Math.min(totalFilePages, p + 1))
-                    }
-                  >
-                    Next
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={filePage === totalFilePages}
-                    onClick={() => setFilePage(totalFilePages)}
-                  >
-                    Last
-                  </button>
-                </nav>
-              )}
-            </section>
-
-            <section className="panel">
-              <header className="panel-header">
-                <h3>Repository structure</h3>
-
-                {result.tree.length > 0 && (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => void handleCopyTree()}
-                    title="Copy structure to clipboard"
-                  >
-                    {isCopied ? (
-                      <Check size={16} className="success-icon" />
-                    ) : (
-                      <Copy size={16} />
-                    )}
-                  </button>
-                )}
-              </header>
-
-              {result.tree.length > 0 ? (
-                <RepositoryTree
-                  nodes={result.tree}
-                  onFileSelect={(node) => {
-                    if (node.type === 'file') {
-                      void handleFileSelect(node.path);
-                    }
-                  }}
-                />
-              ) : (
-                <p className="muted">Repository is empty.</p>
-              )}
-            </section>
-
-            {isLoadingFile && (
-              <section className="panel file-viewer-loading">
-                Loading file...
               </section>
-            )}
 
-            {selectedFile && !isLoadingFile && (
-              <FileViewer
-                file={selectedFile}
-                repositoryUrl={result.snapshot.repository.url}
-                branch={result.snapshot.repository.defaultBranch}
-                onClose={() => setSelectedFile(null)}
-              />
-            )}
-          </div>
-        </section>
-      )}
-    </main>
+              <section className="panel">
+                <header className="panel-header">
+                  <h3>Repository structure</h3>
+
+                  {result.tree.length > 0 && (
+                    <button
+                      type="button"
+                      className="icon-button"
+                      onClick={() => void handleCopyTree()}
+                      title="Copy structure to clipboard"
+                    >
+                      {isCopied ? (
+                        <Check size={16} className="success-icon" />
+                      ) : (
+                        <Copy size={16} />
+                      )}
+                    </button>
+                  )}
+                </header>
+
+                {result.tree.length > 0 ? (
+                  <RepositoryTree
+                    nodes={result.tree}
+                    onFileSelect={(node) => {
+                      if (node.type === 'file') {
+                        void handleFileSelect(node.path);
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className="muted">Repository is empty.</p>
+                )}
+              </section>
+
+              {isLoadingFile && (
+                <section className="panel file-viewer-loading">
+                  Loading file...
+                </section>
+              )}
+
+              {selectedFile && !isLoadingFile && (
+                <FileViewer
+                  file={selectedFile}
+                  repositoryUrl={result.snapshot.repository.url}
+                  branch={result.snapshot.repository.defaultBranch}
+                  onClose={() => setSelectedFile(null)}
+                />
+              )}
+            </div>
+          </section>
+        )}
+      </main>
 
       <footer className="site-footer">
         <div className="footer-content">
@@ -414,7 +414,15 @@ function App() {
               target="_blank"
               rel="noreferrer"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" /></svg>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+              </svg>
               <span>Rohit More</span>
             </a>
           </div>

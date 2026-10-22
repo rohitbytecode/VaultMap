@@ -61,13 +61,24 @@
 }
 
 @keyframes eyebrow-glow {
-  0% { border-color: rgba(129, 140, 248, 0.15); }
-  100% { border-color: rgba(129, 140, 248, 0.3); }
+  0% {
+    border-color: rgba(129, 140, 248, 0.15);
+  }
+  100% {
+    border-color: rgba(129, 140, 248, 0.3);
+  }
 }
 
 @keyframes dot-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.7); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.7);
+  }
 }
 
 h1 {
@@ -90,8 +101,12 @@ h1 {
 }
 
 @keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 .subtitle {
@@ -129,7 +144,9 @@ h1 {
   outline: none;
   border-color: var(--accent);
   background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 0 0 3px var(--accent-subtle), var(--shadow-glow);
+  box-shadow:
+    0 0 0 3px var(--accent-subtle),
+    var(--shadow-glow);
 }
 
 .scan-form input::placeholder {
@@ -215,8 +232,15 @@ h1 {
 }
 
 @keyframes status-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.75); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
 }
 
 /* ─── Error State ────────────────────────────────────── */
@@ -237,9 +261,16 @@ h1 {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
 }
 
 /* ─── Results Section ────────────────────────────────── */
@@ -254,9 +285,15 @@ h1 {
   animation: stagger-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.results > *:nth-child(1) { animation-delay: 0s; }
-.results > *:nth-child(2) { animation-delay: 0.08s; }
-.results > *:nth-child(3) { animation-delay: 0.16s; }
+.results > *:nth-child(1) {
+  animation-delay: 0s;
+}
+.results > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.results > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
 
 /* ─── Repository Header ─────────────────────────────── */
 
@@ -388,16 +425,26 @@ h1 {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--text-primary), var(--accent-bright));
+  background: linear-gradient(
+    135deg,
+    var(--text-primary),
+    var(--accent-bright)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* Color-code each stat card */
-.stats article:nth-child(1) span { color: var(--accent); }
-.stats article:nth-child(2) span { color: var(--cyan); }
-.stats article:nth-child(3) span { color: var(--emerald); }
+.stats article:nth-child(1) span {
+  color: var(--accent);
+}
+.stats article:nth-child(2) span {
+  color: var(--cyan);
+}
+.stats article:nth-child(3) span {
+  color: var(--emerald);
+}
 
 .stats article:nth-child(1)::after {
   background: linear-gradient(90deg, var(--accent), transparent);
@@ -539,7 +586,9 @@ h1 {
 }
 
 .file {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   font-size: 11.5px;
   color: var(--text-primary);
   border: 0;
@@ -627,7 +676,9 @@ h1 {
 /* ─── Repository Tree ────────────────────────────────── */
 
 .repository-tree {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   padding: 10px;
   max-height: 460px;
   overflow: auto;
@@ -783,7 +834,9 @@ h1 {
 
 .file-viewer-content pre {
   margin: 0;
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   font-size: 11.5px;
   line-height: 1.65;
   color: var(--text-primary);
@@ -808,8 +861,13 @@ h1 {
 }
 
 @keyframes loading-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ─── Footer ─────────────────────────────────────────── */
@@ -829,7 +887,12 @@ h1 {
   transform: translateX(-50%);
   width: min(400px, 80%);
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-hover),
+    transparent
+  );
 }
 
 .footer-content {
@@ -856,11 +919,22 @@ h1 {
 }
 
 @keyframes heartbeat {
-  0%, 100% { transform: scale(1); }
-  15% { transform: scale(1.25); }
-  30% { transform: scale(1); }
-  45% { transform: scale(1.15); }
-  60% { transform: scale(1); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.25);
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.15);
+  }
+  60% {
+    transform: scale(1);
+  }
 }
 
 .footer-developer {
@@ -964,8 +1038,12 @@ h1 {
 }
 
 @keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* ─── Responsive ─────────────────────────────────────── */
