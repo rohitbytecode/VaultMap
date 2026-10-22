@@ -194,9 +194,16 @@ function App() {
           />
 
           <button type="submit" disabled={isScanning}>
-            {isScanning ? 'Scanning...' : 'Scan Repository'}
+            Scan Repository
           </button>
         </form>
+
+        {isScanning && (
+          <div className="scan-status">
+            <span className="scan-status-dot" />
+            <span>Scanning repository...</span>
+          </div>
+        )}
 
         {error && <p className="error">{error}</p>}
       </section>
