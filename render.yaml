@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: vaultmap-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm turbo run build --filter=@vaultmap/api...
+    startCommand: pnpm --filter @vaultmap/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: CORS_ORIGIN
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
