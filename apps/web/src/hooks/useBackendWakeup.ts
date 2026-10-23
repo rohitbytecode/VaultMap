@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const API_URL = (
   import.meta.env.VITE_API_URL ||
@@ -42,12 +42,26 @@ function probeHealth(
           resolve(false);
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (parentSignal.aborted) {
           reject(new DOMException('The operation was aborted.', 'AbortError'));
-        } else {
-          resolve(false);
+          return;
         }
+
+        // An AbortError here means our own timeout fired — the server
+        // didn't respond in time, so it's still booting.
+        if (isAbortError(error)) {
+          resolve(false);
+          return;
+        }
+
+        if (error instanceof TypeError) {
+          resolve(true);
+          return;
+        }
+
+        // Any other unexpected error - treat as still down.
+        resolve(false);
       })
       .finally(() => {
         clearTimeout(timeout);
@@ -103,7 +117,7 @@ export function useBackendWakeup() {
     };
   }, []);
 
-  async function ensureAwake(): Promise<boolean> {
+  const ensureAwake = useCallback(async (): Promise<boolean> => {
     if (controllerRef.current) return false;
 
     const controller = new AbortController();
@@ -164,7 +178,7 @@ export function useBackendWakeup() {
       deadlineRef.current = 0;
       if (controllerRef.current === controller) controllerRef.current = null;
     }
-  }
+  }, []);
 
   return { ...state, ensureAwake };
 }
