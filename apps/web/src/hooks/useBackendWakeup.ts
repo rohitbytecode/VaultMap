@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 const API_URL = (
-  import.meta.env.VITE_API_URL || 'http://localhost:6770'
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? 'http://localhost:6770'
+    : 'https://vaultmap-api.onrender.com')
 ).replace(/\/+$/, '');
 const QUICK_TIMEOUT_MS = 2500;
 const POLL_INTERVAL_MS = 4000;
@@ -142,7 +145,7 @@ export function useBackendWakeup() {
         phase: 'error',
         secondsRemaining: 0,
         error:
-          'The server did not wake up within 90 seconds. Check your connection and retry.',
+          'Could not confirm server readiness after 90 seconds. Check VITE_API_URL and the backend CORS_ORIGIN, then retry.',
       });
       return false;
     } catch (error) {

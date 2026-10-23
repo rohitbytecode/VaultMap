@@ -73,7 +73,10 @@ interface ScanResult {
 }
 
 const API_URL = (
-  import.meta.env.VITE_API_URL || 'http://localhost:6770'
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? 'http://localhost:6770'
+    : 'https://vaultmap-api.onrender.com')
 ).replace(/\/+$/, '');
 const FILES_PER_PAGE = 100;
 
