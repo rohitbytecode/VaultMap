@@ -231,6 +231,49 @@ h1 {
   animation: status-pulse 1s ease-in-out infinite;
 }
 
+.wakeup-status {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  color: var(--text-primary);
+  background: var(--amber-subtle, rgba(251, 191, 36, 0.08));
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.wakeup-status progress {
+  width: 100%;
+  height: 5px;
+  accent-color: var(--amber);
+}
+
+.wakeup-status span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.wakeup-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--rose);
+  font-size: 12px;
+}
+
+.wakeup-error button {
+  padding: 6px 12px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  cursor: pointer;
+}
+
 @keyframes status-pulse {
   0%,
   100% {

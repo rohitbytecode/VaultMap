@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Copy, Check } from 'lucide-react';
 
 import type {
@@ -8,6 +8,7 @@ import type {
 
 import RepositoryTree from './components/RepositoryTree';
 import FileViewer from './components/FileViewer';
+import { useBackendWakeup } from './hooks/useBackendWakeup';
 
 import './App.css';
 
@@ -86,6 +87,8 @@ function App() {
   const [selectedFile, setSelectedFile] =
     useState<RepositoryFileContent | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const wakeup = useBackendWakeup();
+  const scanInProgressRef = useRef(false);
 
   const totalFilePages = result
     ? Math.ceil(result.snapshot.files.length / FILES_PER_PAGE)
@@ -111,12 +114,21 @@ function App() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    await startScan();
+  }
+
+  async function startScan() {
+    if (scanInProgressRef.current) return;
+    scanInProgressRef.current = true;
+
     setError('');
     setResult(null);
     setIsScanning(true);
     setFilePage(1);
 
     try {
+      if (!(await wakeup.ensureAwake())) return;
+
       const response = await fetch(`${API_URL}/api/repositories/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,6 +147,7 @@ function App() {
         err instanceof Error ? err.message : 'Failed to scan repository',
       );
     } finally {
+      scanInProgressRef.current = false;
       setIsScanning(false);
     }
   }
@@ -195,15 +208,39 @@ function App() {
               required
             />
 
-            <button type="submit" disabled={isScanning}>
+            <button
+              type="submit"
+              disabled={isScanning || wakeup.phase === 'waking'}
+            >
               Scan Repository
             </button>
           </form>
 
-          {isScanning && (
+          {wakeup.phase === 'waking' && (
+            <div className="wakeup-status" role="status" aria-live="polite">
+              <p>Server is waking up, this can take up to a minute.</p>
+              <progress
+                max={90}
+                value={90 - wakeup.secondsRemaining}
+                aria-label={`${wakeup.secondsRemaining} seconds remaining`}
+              />
+              <span>Waiting up to {wakeup.secondsRemaining}s</span>
+            </div>
+          )}
+
+          {isScanning && wakeup.phase !== 'waking' && (
             <div className="scan-status">
               <span className="scan-status-dot" />
               <span>Scanning repository...</span>
+            </div>
+          )}
+
+          {wakeup.phase === 'error' && (
+            <div className="wakeup-error" role="alert">
+              <p>{wakeup.error}</p>
+              <button type="button" onClick={() => void startScan()}>
+                Retry
+              </button>
             </div>
           )}
 
