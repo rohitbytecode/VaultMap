@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 
@@ -6,9 +7,18 @@ import { fileRouter } from './routes/file.js';
 
 export const app = express();
 
+const corsOrigin = process.env.CORS_ORIGIN?.trim();
+const origin = corsOrigin
+  ? corsOrigin === '*'
+    ? '*'
+    : corsOrigin.includes(',')
+      ? corsOrigin.split(',').map((o) => o.trim())
+      : corsOrigin
+  : true;
+
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin,
   }),
 );
 

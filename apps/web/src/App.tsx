@@ -71,7 +71,9 @@ interface ScanResult {
   tree: RepositoryTreeNode[];
 }
 
-const API_URL = 'http://localhost:6770';
+const API_URL = (
+  import.meta.env.VITE_API_URL || 'http://localhost:6770'
+).replace(/\/+$/, '');
 const FILES_PER_PAGE = 100;
 
 function App() {
