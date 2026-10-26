@@ -206,6 +206,61 @@ h1 {
   box-shadow: none;
 }
 
+.private-repository-note {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(105deg, rgba(251, 191, 36, 0.09), transparent 78%),
+    rgba(255, 255, 255, 0.018);
+  animation: fade-in 0.6s ease-out 0.2s both;
+}
+
+.private-repository-icon {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--amber);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  border-radius: var(--radius-xs);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.private-repository-copy {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.private-repository-copy strong {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.private-repository-copy > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.private-repository-status {
+  flex: 0 0 auto;
+  color: var(--amber);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 /* ─── Scan Status Indicator ──────────────────────────── */
 
 .scan-status {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, LockKeyhole } from 'lucide-react';
 
 import type {
   RepositoryTreeNode,
@@ -218,6 +218,19 @@ function App() {
               Scan Repository
             </button>
           </form>
+
+          <aside className="private-repository-note">
+            <span className="private-repository-icon" aria-hidden="true">
+              <LockKeyhole size={17} />
+            </span>
+            <span className="private-repository-copy">
+              <strong>Private repositories are in the works</strong>
+              <span>
+                VaultMap currently supports public GitHub repositories.
+              </span>
+            </span>
+            <span className="private-repository-status">UNDER DEVELOPMENT</span>
+          </aside>
 
           {wakeup.phase === 'waking' && (
             <div className="wakeup-status" role="status" aria-live="polite">
