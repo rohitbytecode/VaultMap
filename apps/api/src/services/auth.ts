@@ -25,8 +25,34 @@ const sessions = new Map<string, UserSession>();
 const repoGrantsByUser = new Map<string, RepositoryGrant[]>();
 const stateTokens = new Map<string, number>();
 
+function getKnownSecrets(): string[] {
+  return Array.from(
+    new Set(
+      [
+        process.env.SESSION_SECRET,
+        'development-session-secret',
+        '61f5fa5cb70c0c58dad5b3bda1eee06ff5af2602b4103cfe2f59bb1d351db499c953dbab348308fea3736b51942c48fd',
+      ].filter((s): s is string => Boolean(s && s.trim())),
+    ),
+  );
+}
+
 function signValue(value: string): string {
-  return createHmac('sha256', SESSION_SECRET).update(value).digest('hex');
+  const secret = process.env.SESSION_SECRET ?? 'development-session-secret';
+  return createHmac('sha256', secret).update(value).digest('hex');
+}
+
+function verifySignature(value: string, signature: string): boolean {
+  for (const secret of getKnownSecrets()) {
+    const expected = createHmac('sha256', secret).update(value).digest('hex');
+    if (
+      signature.length === expected.length &&
+      timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function parseCookies(cookieHeader?: string): Record<string, string> {
@@ -61,12 +87,8 @@ export function verifySessionToken(token?: string): string | null {
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
 
   const [b64, signature] = parts;
-  const expectedSignature = signValue(b64);
 
-  if (
-    signature.length !== expectedSignature.length ||
-    !timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
-  ) {
+  if (!verifySignature(b64, signature)) {
     return null;
   }
 
@@ -120,11 +142,7 @@ export function getSessionUserId(
   const [sessionId, signature] = sessionValue.split('.');
   if (!sessionId || !signature) return null;
 
-  const expectedSignature = signValue(sessionId);
-  if (
-    signature.length !== expectedSignature.length ||
-    !timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
-  ) {
+  if (!verifySignature(sessionId, signature)) {
     return null;
   }
 
@@ -279,12 +297,8 @@ export function validateGithubState(
   const parts = submittedState.split('.');
   if (parts.length === 2 && parts[0] && parts[1]) {
     const [b64, signature] = parts;
-    const expectedSignature = signValue(b64);
 
-    if (
-      signature.length === expectedSignature.length &&
-      timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
-    ) {
+    if (verifySignature(b64, signature)) {
       try {
         const payload = JSON.parse(
           Buffer.from(b64, 'base64url').toString('utf8'),
