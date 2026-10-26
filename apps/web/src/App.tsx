@@ -80,6 +80,11 @@ const API_URL = (
 ).replace(/\/+$/, '');
 const FILES_PER_PAGE = 100;
 
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('vaultmap_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 function App() {
   const [url, setUrl] = useState('');
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -99,7 +104,11 @@ function App() {
   // Check GitHub connection on mount and after OAuth redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('github') === 'connected') {
+    const token = params.get('token');
+    if (token) {
+      localStorage.setItem('vaultmap_token', token);
+    }
+    if (params.get('github') === 'connected' || token) {
       // Clean the URL without a reload
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -109,6 +118,7 @@ function App() {
   async function checkGitHubStatus() {
     try {
       const response = await fetch(`${API_URL}/api/github/status`, {
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
       if (response.ok) {
@@ -166,7 +176,10 @@ function App() {
 
       const response = await fetch(`${API_URL}/api/repositories/scan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
         credentials: 'include',
         // Automatically use private access if the user has connected GitHub
         body: JSON.stringify({ url, allowPrivate: isGitHubConnected }),
@@ -209,6 +222,7 @@ function App() {
       const response = await fetch(
         `${API_URL}/api/repositories/file?${params.toString()}`,
         {
+          headers: getAuthHeaders(),
           credentials: 'include',
         },
       );
@@ -230,24 +244,39 @@ function App() {
     setGithubConnecting(true);
     setError('');
     try {
-      const response = await fetch(`${API_URL}/api/github/auth/start`, {
-        credentials: 'include',
-      });
-      const data = await response.json() as { redirectUrl?: string; error?: string };
+      const returnTo = window.location.origin;
+      const response = await fetch(
+        `${API_URL}/api/github/auth/start?return_to=${encodeURIComponent(returnTo)}`,
+        {
+          credentials: 'include',
+        },
+      );
+      const data = (await response.json()) as {
+        redirectUrl?: string;
+        error?: string;
+      };
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to start GitHub connection');
       }
-      window.location.href = data.redirectUrl ?? `${API_URL}/api/github/auth/start`;
+      window.location.href =
+        data.redirectUrl ?? `${API_URL}/api/github/auth/start`;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to start GitHub connection');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to start GitHub connection',
+      );
       setGithubConnecting(false);
     }
   }
 
   async function handleDisconnectGitHub() {
+    const headers = getAuthHeaders();
+    localStorage.removeItem('vaultmap_token');
     try {
       await fetch(`${API_URL}/api/github/disconnect`, {
         method: 'POST',
+        headers,
         credentials: 'include',
       });
     } catch {

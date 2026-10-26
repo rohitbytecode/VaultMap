@@ -2,12 +2,16 @@ import { App } from 'octokit';
 import type { Octokit } from 'octokit';
 
 function normalizePrivateKey(privateKey: string): string {
-  return privateKey
-    .trim()
-    .replace(/\\n/g, '\n')
-    .replace(/\r/g, '')
-    .split(/\s+/)
-    .join('\n');
+  const cleaned = privateKey.trim().replace(/\\n/g, '\n').replace(/\r/g, '');
+  const headerMatch = cleaned.match(/(-----BEGIN[^-]+-----)(.+)(-----END[^-]+-----)/s);
+  if (headerMatch && headerMatch[1] && headerMatch[2] && headerMatch[3]) {
+    const header = headerMatch[1].trim();
+    const body = headerMatch[2].replace(/\s+/g, '');
+    const footer = headerMatch[3].trim();
+    const bodyLines = body.match(/.{1,64}/g)?.join('\n') ?? body;
+    return `${header}\n${bodyLines}\n${footer}\n`;
+  }
+  return cleaned;
 }
 
 export function getGitHubApp(): App | null {

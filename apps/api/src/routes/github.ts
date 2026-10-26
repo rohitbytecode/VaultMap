@@ -4,6 +4,7 @@ import {
   clearSessionCookie,
   generateGithubStateCookie,
   getSessionUserId,
+  getStateReturnTo,
   listAuthorizedRepositories,
   revokeInstallationForUser,
   setInstallationGrant,
@@ -14,7 +15,8 @@ import { getGitHubApp } from '../services/github-app.js';
 
 export const githubRouter = Router();
 
-githubRouter.get('/auth/start', (_req, res) => {
+// ─── Start GitHub OAuth Flow ─────────────────────────────────────────────────
+githubRouter.get('/auth/start', (req, res) => {
   const clientId = process.env.GITHUB_APP_CLIENT_ID;
 
   if (!clientId) {
@@ -24,16 +26,20 @@ githubRouter.get('/auth/start', (_req, res) => {
     return;
   }
 
-  const state = generateGithubStateCookie(res);
+  // Preserve the caller's origin/return URL if supplied
+  const returnTo =
+    typeof req.query.return_to === 'string' && req.query.return_to.trim()
+      ? req.query.return_to.trim()
+      : typeof req.headers.origin === 'string' && req.headers.origin.trim()
+        ? req.headers.origin.trim()
+        : undefined;
 
-  // Build the OAuth authorize URL. The `scope` is intentionally empty so the
-  // user only grants the minimum access (public data + what the App already
-  // has via its installation permissions).
+  const state = generateGithubStateCookie(res, returnTo);
+
+  // Build the OAuth authorize URL
   const authUrl = new URL('https://github.com/login/oauth/authorize');
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('state', state);
-  // Request the installation_id alongside the code so we can bind the
-  // installation in one round-trip.
   authUrl.searchParams.set('scope', '');
 
   res.json({
@@ -43,13 +49,6 @@ githubRouter.get('/auth/start', (_req, res) => {
 });
 
 // ─── Auth Callback ────────────────────────────────────────────────────────────
-//
-// GitHub calls this with ?code=...&state=...&installation_id=... (installation_id
-// is present when the user just installed the app via the OAuth flow).
-// We exchange the code for a user access token, then use the GitHub API to
-// enumerate all installations of this app that belong to the authenticated
-// user and register every accessible repo in the session.
-//
 githubRouter.get('/auth/callback', async (req, res) => {
   const { state, code, installation_id } = req.query;
 
@@ -72,11 +71,13 @@ githubRouter.get('/auth/callback', async (req, res) => {
     return;
   }
 
+  const returnTo = getStateReturnTo(state);
+
   const clientId = process.env.GITHUB_APP_CLIENT_ID;
   const clientSecret = process.env.GITHUB_APP_CLIENT_SECRET;
 
   const userId = `github-user-${Date.now()}`;
-  setSessionCookie(res, userId);
+  const sessionToken = setSessionCookie(res, userId);
 
   // ── Step 1: exchange code for user access token ──────────────────────────
   let userToken: string | null = null;
@@ -118,7 +119,6 @@ githubRouter.get('/auth/callback', async (req, res) => {
   let registeredAny = false;
 
   if (userToken && githubApp) {
-    // Best path: use the user's own token to list their installations of this app.
     try {
       const installsResponse = await fetch(
         'https://api.github.com/user/installations',
@@ -164,11 +164,11 @@ githubRouter.get('/auth/callback', async (req, res) => {
     }
   }
 
-  // ── Step 3: fallback — use the explicit installation_id if provided ───────
-  if (!registeredAny && hasInstallationId && githubApp) {
-    const installId = Number(installation_id);
-
-    if (Number.isInteger(installId) && installId > 0) {
+  // ── Step 3: fallback — use explicit installation_id if provided ──────────
+  let installId: number | null = null;
+  if (hasInstallationId) {
+    installId = Number(installation_id);
+    if (!registeredAny && Number.isInteger(installId) && installId > 0 && githubApp) {
       try {
         const client = await githubApp.getInstallationOctokit(installId);
         const { data } =
@@ -187,16 +187,17 @@ githubRouter.get('/auth/callback', async (req, res) => {
         }
         registeredAny = true;
       } catch {
-        // Session is still valid — repos can be resolved later via findInstallationForRepository.
+        // Session is still created
       }
     }
   }
 
   // ── Redirect back to the frontend ────────────────────────────────────────
   const frontendUrl =
+    returnTo ||
     process.env.FRONTEND_URL ||
     (process.env.NODE_ENV === 'production'
-      ? 'https://vaultmap-web.vercel.app'
+      ? 'https://vaultmap.rohitdmore.in'
       : 'http://localhost:5173');
 
   const acceptsHtml =
@@ -205,13 +206,83 @@ githubRouter.get('/auth/callback', async (req, res) => {
       req.headers.accept.includes('application/xhtml+xml'));
 
   if (!acceptsHtml) {
-    res.json({ authenticated: true, userId, registeredAny });
+    res.json({
+      authenticated: true,
+      userId,
+      token: sessionToken,
+      installationId: installId ?? (hasInstallationId ? Number(installation_id) : undefined),
+      registeredAny,
+    });
     return;
   }
 
+  const repoCount = listAuthorizedRepositories(userId).length;
   res.redirect(
-    `${frontendUrl}/?github=connected&repos=${String(listAuthorizedRepositories(userId).length)}`,
+    `${frontendUrl}/?github=connected&token=${encodeURIComponent(sessionToken)}&repos=${String(repoCount)}`,
   );
+});
+
+// ─── Manual Installation Binding ──────────────────────────────────────────────
+githubRouter.post('/installations', (req, res) => {
+  const {
+    installationId,
+    repositoryIds,
+    state,
+    repositoryOwner,
+    repositoryName,
+  } = req.body as {
+    installationId?: unknown;
+    repositoryIds?: unknown;
+    state?: unknown;
+    repositoryOwner?: unknown;
+    repositoryName?: unknown;
+  };
+
+  if (typeof state !== 'string' || !validateGithubState(req, state)) {
+    res.status(400).json({
+      error: 'Invalid or expired GitHub state.',
+    });
+    return;
+  }
+
+  const userId = getSessionUserId(req as never);
+
+  if (!userId) {
+    res.status(401).json({
+      error: 'Authentication required for GitHub App installation binding.',
+    });
+    return;
+  }
+
+  if (!Number.isInteger(installationId) || (installationId as number) <= 0) {
+    res.status(400).json({
+      error: 'Installation ID is required.',
+    });
+    return;
+  }
+
+  const repositoryList = Array.isArray(repositoryIds) ? repositoryIds : [];
+
+  if (!repositoryList.length) {
+    res.status(400).json({
+      error: 'At least one repository ID is required.',
+    });
+    return;
+  }
+
+  setInstallationGrant(
+    userId,
+    installationId as number,
+    repositoryList.filter((id) => Number.isInteger(id)) as number[],
+    typeof repositoryOwner === 'string' ? repositoryOwner : 'owner',
+    typeof repositoryName === 'string' ? repositoryName : 'repo',
+  );
+
+  res.json({
+    ok: true,
+    installationId,
+    repositories: listAuthorizedRepositories(userId),
+  });
 });
 
 // ─── Status ───────────────────────────────────────────────────────────────────
@@ -227,7 +298,7 @@ githubRouter.get('/status', (req, res) => {
   res.json({ connected: true, repositories });
 });
 
-// ─── Repository listing ───────────────────────────────────────────────────────
+// ─── Repository Listing ───────────────────────────────────────────────────────
 githubRouter.get('/repositories', (req, res) => {
   const userId = getSessionUserId(req as never);
 
