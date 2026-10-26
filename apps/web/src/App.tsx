@@ -329,12 +329,20 @@ function App() {
               <span className="github-access-copy">
                 <strong>
                   {isGitHubConnected
-                    ? `GitHub Connected - ${githubRepos.length} repo${githubRepos.length !== 1 ? 's' : ''} accessible`
+                    ? githubRepos.length > 0
+                      ? `GitHub Connected — ${githubRepos.length} repo${githubRepos.length !== 1 ? 's' : ''} accessible`
+                      : 'GitHub Connected'
                     : 'Private Repository Access'}
                 </strong>
-                <span>
+                <span
+                  title={
+                    githubRepos.length > 0 ? githubRepos.join(', ') : undefined
+                  }
+                >
                   {isGitHubConnected
-                    ? 'Private repos are automatically scanned via your GitHub App installation.'
+                    ? githubRepos.length > 0
+                      ? `Authorized: ${githubRepos.slice(0, 3).join(', ')}${githubRepos.length > 3 ? ` +${githubRepos.length - 3} more` : ''}`
+                      : 'Private repos are automatically scanned via your GitHub App installation.'
                     : 'Connect your GitHub account to scan private repositories.'}
                 </span>
               </span>

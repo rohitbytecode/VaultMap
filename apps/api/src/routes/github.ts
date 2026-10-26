@@ -11,7 +11,10 @@ import {
   setSessionCookie,
   validateGithubState,
 } from '../services/auth.js';
-import { getGitHubApp } from '../services/github-app.js';
+import {
+  getGitHubApp,
+  listAllAccessibleRepositories,
+} from '../services/github-app.js';
 
 export const githubRouter = Router();
 
@@ -192,6 +195,27 @@ githubRouter.get('/auth/callback', async (req, res) => {
     }
   }
 
+  // Step 4: fallback - scan all accessible installations of the app
+  if (!registeredAny && githubApp) {
+    try {
+      const appRepos = await listAllAccessibleRepositories();
+      for (const repo of appRepos) {
+        setInstallationGrant(
+          userId,
+          repo.installationId,
+          [repo.repositoryId],
+          repo.repositoryOwner,
+          repo.repositoryName,
+        );
+      }
+      if (appRepos.length > 0) {
+        registeredAny = true;
+      }
+    } catch {
+      // Best effort
+    }
+  }
+
   // ── Redirect back to the frontend ────────────────────────────────────────
   const frontendUrl =
     returnTo ||
@@ -286,7 +310,7 @@ githubRouter.post('/installations', (req, res) => {
 });
 
 // ─── Status ───────────────────────────────────────────────────────────────────
-githubRouter.get('/status', (req, res) => {
+githubRouter.get('/status', async (req, res) => {
   const userId = getSessionUserId(req as never);
 
   if (!userId) {
@@ -294,12 +318,32 @@ githubRouter.get('/status', (req, res) => {
     return;
   }
 
-  const repositories = listAuthorizedRepositories(userId);
+  let repositories = listAuthorizedRepositories(userId);
+
+  // If session has no cached grants, query all installations accessible to the app
+  if (repositories.length === 0) {
+    try {
+      const appRepos = await listAllAccessibleRepositories();
+      for (const repo of appRepos) {
+        setInstallationGrant(
+          userId,
+          repo.installationId,
+          [repo.repositoryId],
+          repo.repositoryOwner,
+          repo.repositoryName,
+        );
+      }
+      repositories = listAuthorizedRepositories(userId);
+    } catch {
+      // Best-effort
+    }
+  }
+
   res.json({ connected: true, repositories });
 });
 
 // ─── Repository Listing ───────────────────────────────────────────────────────
-githubRouter.get('/repositories', (req, res) => {
+githubRouter.get('/repositories', async (req, res) => {
   const userId = getSessionUserId(req as never);
 
   if (!userId) {
@@ -309,7 +353,27 @@ githubRouter.get('/repositories', (req, res) => {
     return;
   }
 
-  res.json({ repositories: listAuthorizedRepositories(userId) });
+  let repositories = listAuthorizedRepositories(userId);
+
+  if (repositories.length === 0) {
+    try {
+      const appRepos = await listAllAccessibleRepositories();
+      for (const repo of appRepos) {
+        setInstallationGrant(
+          userId,
+          repo.installationId,
+          [repo.repositoryId],
+          repo.repositoryOwner,
+          repo.repositoryName,
+        );
+      }
+      repositories = listAuthorizedRepositories(userId);
+    } catch {
+      // Best-effort
+    }
+  }
+
+  res.json({ repositories });
 });
 
 // ─── Disconnect ───────────────────────────────────────────────────────────────

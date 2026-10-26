@@ -104,3 +104,54 @@ export async function createInstallationClientForRepository(
 
   return client;
 }
+
+export async function listAllAccessibleRepositories(): Promise<
+  Array<{
+    installationId: number;
+    repositoryId: number;
+    repositoryOwner: string;
+    repositoryName: string;
+  }>
+> {
+  const githubApp = getGitHubApp();
+  if (!githubApp) return [];
+
+  try {
+    const { data: installations } = await githubApp.octokit.request(
+      'GET /app/installations',
+      { per_page: 100 },
+    );
+
+    const results: Array<{
+      installationId: number;
+      repositoryId: number;
+      repositoryOwner: string;
+      repositoryName: string;
+    }> = [];
+
+    for (const installation of installations) {
+      try {
+        const client = await githubApp.getInstallationOctokit(installation.id);
+        const { data } =
+          await client.rest.apps.listReposAccessibleToInstallation({
+            per_page: 100,
+          });
+
+        for (const repo of data.repositories) {
+          results.push({
+            installationId: installation.id,
+            repositoryId: repo.id,
+            repositoryOwner: repo.owner.login,
+            repositoryName: repo.name,
+          });
+        }
+      } catch {
+        // Skip inaccessible installations
+      }
+    }
+
+    return results;
+  } catch {
+    return [];
+  }
+}
