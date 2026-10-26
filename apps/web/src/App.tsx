@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Copy, Check, LockKeyhole } from 'lucide-react';
+import { Copy, Check, LockKeyhole, CircleCheck, CircleX } from 'lucide-react';
 
 import type {
   RepositoryTreeNode,
@@ -90,23 +90,38 @@ function App() {
   const [selectedFile, setSelectedFile] =
     useState<RepositoryFileContent | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
-  const [allowPrivateAccess, setAllowPrivateAccess] = useState(false);
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);
+  const [githubConnecting, setGithubConnecting] = useState(false);
+  const [githubRepos, setGithubRepos] = useState<string[]>([]);
   const wakeup = useBackendWakeup();
   const scanInProgressRef = useRef(false);
 
+  // Check GitHub connection on mount and after OAuth redirect
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('github') === 'connected') {
+      // Clean the URL without a reload
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     void checkGitHubStatus();
   }, []);
 
   async function checkGitHubStatus() {
     try {
-      const response = await fetch(`${API_URL}/api/github/repositories`, {
+      const response = await fetch(`${API_URL}/api/github/status`, {
         credentials: 'include',
       });
-      setIsGitHubConnected(response.ok);
+      if (response.ok) {
+        const data = await response.json() as { connected: boolean; repositories: { repositoryOwner: string; repositoryName: string }[] };
+        setIsGitHubConnected(data.connected);
+        setGithubRepos(data.repositories.map((r) => `${r.repositoryOwner}/${r.repositoryName}`));
+      } else {
+        setIsGitHubConnected(false);
+        setGithubRepos([]);
+      }
     } catch {
       setIsGitHubConnected(false);
+      setGithubRepos([]);
     }
   }
 
@@ -153,7 +168,8 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ url, allowPrivate: allowPrivateAccess }),
+        // Automatically use private access if the user has connected GitHub
+        body: JSON.stringify({ url, allowPrivate: isGitHubConnected }),
       });
 
       const data = await response.json();
@@ -210,6 +226,37 @@ function App() {
     }
   }
 
+  async function handleConnectGitHub() {
+    setGithubConnecting(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/api/github/auth/start`, {
+        credentials: 'include',
+      });
+      const data = await response.json() as { redirectUrl?: string; error?: string };
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to start GitHub connection');
+      }
+      window.location.href = data.redirectUrl ?? `${API_URL}/api/github/auth/start`;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to start GitHub connection');
+      setGithubConnecting(false);
+    }
+  }
+
+  async function handleDisconnectGitHub() {
+    try {
+      await fetch(`${API_URL}/api/github/disconnect`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Best-effort
+    }
+    setIsGitHubConnected(false);
+    setGithubRepos([]);
+  }
+
   return (
     <>
       <main className="app">
@@ -240,59 +287,59 @@ function App() {
             </button>
           </form>
 
-          <div className="private-repository-options">
-            <label>
-              <input
-                type="checkbox"
-                checked={allowPrivateAccess}
-                onChange={() => setAllowPrivateAccess((value) => !value)}
-              />
-              Use GitHub App access for private repositories
-            </label>
+          {/* GitHub Private Access Card */}
+          <div className="github-access-card">
+            <div className="github-access-info">
+              <span className="github-access-icon" aria-hidden="true">
+                {isGitHubConnected ? (
+                  <CircleCheck size={16} />
+                ) : (
+                  <LockKeyhole size={16} />
+                )}
+              </span>
+              <span className="github-access-copy">
+                <strong>
+                  {isGitHubConnected
+                    ? `GitHub Connected - ${githubRepos.length} repo${githubRepos.length !== 1 ? 's' : ''} accessible`
+                    : 'Private Repository Access'}
+                </strong>
+                <span>
+                  {isGitHubConnected
+                    ? 'Private repos are automatically scanned via your GitHub App installation.'
+                    : 'Connect your GitHub account to scan private repositories.'}
+                </span>
+              </span>
+            </div>
 
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                void fetch(`${API_URL}/api/github/auth/start`, {
-                  credentials: 'include',
-                })
-                  .then(async (response) => {
-                    const data = await response.json();
-                    if (!response.ok) {
-                      throw new Error(
-                        data.error ?? 'Unable to start GitHub connection',
-                      );
-                    }
-                    window.location.href =
-                      data.redirectUrl ?? `${API_URL}/api/github/auth/start`;
-                  })
-                  .catch((err) => {
-                    setError(
-                      err instanceof Error
-                        ? err.message
-                        : 'Unable to start GitHub connection',
-                    );
-                  });
-              }}
-            >
-              {isGitHubConnected ? 'GitHub Connected' : 'Connect GitHub'}
-            </button>
+            <div className="github-access-actions">
+              {isGitHubConnected ? (
+                <button
+                  type="button"
+                  className="github-connected-btn"
+                  onClick={() => void handleDisconnectGitHub()}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                  </svg>
+                  Connected
+                  <CircleX size={12} className="disconnect-icon" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="github-connect-btn"
+                  disabled={githubConnecting}
+                  onClick={() => void handleConnectGitHub()}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                  </svg>
+                  {githubConnecting ? 'Redirecting…' : 'Connect GitHub'}
+                </button>
+              )}
+            </div>
           </div>
 
-          <aside className="private-repository-note">
-            <span className="private-repository-icon" aria-hidden="true">
-              <LockKeyhole size={17} />
-            </span>
-            <span className="private-repository-copy">
-              <strong>Private repositories are supported</strong>
-              <span>
-                VaultMap validates GitHub App installation access before
-                scanning or reading private files.
-              </span>
-            </span>
-            <span className="private-repository-status">SECURE</span>
-          </aside>
 
           {wakeup.phase === 'waking' && (
             <div className="wakeup-status" role="status" aria-live="polite">
