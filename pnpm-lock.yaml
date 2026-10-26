@@ -39,7 +39,7 @@ importers:
         specifier: ^5.2.1
         version: 5.2.1
       octokit:
-        specifier: 5.0.5
+        specifier: ^5.0.5
         version: 5.0.5
     devDependencies:
       '@types/cors':
