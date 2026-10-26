@@ -13,6 +13,7 @@
   "dependencies": {
     "@react-symbols/icons": "^1.4.1",
     "@vaultmap/types": "workspace:*",
+    "@xyflow/react": "^12.12.0",
     "lucide-react": "^1.34.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
