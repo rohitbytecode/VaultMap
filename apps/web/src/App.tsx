@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Copy, Check, LockKeyhole } from 'lucide-react';
 
 import type {
@@ -90,8 +90,25 @@ function App() {
   const [selectedFile, setSelectedFile] =
     useState<RepositoryFileContent | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [allowPrivateAccess, setAllowPrivateAccess] = useState(false);
+  const [isGitHubConnected, setIsGitHubConnected] = useState(false);
   const wakeup = useBackendWakeup();
   const scanInProgressRef = useRef(false);
+
+  useEffect(() => {
+    void checkGitHubStatus();
+  }, []);
+
+  async function checkGitHubStatus() {
+    try {
+      const response = await fetch(`${API_URL}/api/github/repositories`, {
+        credentials: 'include',
+      });
+      setIsGitHubConnected(response.ok);
+    } catch {
+      setIsGitHubConnected(false);
+    }
+  }
 
   const totalFilePages = result
     ? Math.ceil(result.snapshot.files.length / FILES_PER_PAGE)
@@ -135,7 +152,8 @@ function App() {
       const response = await fetch(`${API_URL}/api/repositories/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        credentials: 'include',
+        body: JSON.stringify({ url, allowPrivate: allowPrivateAccess }),
       });
 
       const data = await response.json();
@@ -174,6 +192,9 @@ function App() {
 
       const response = await fetch(
         `${API_URL}/api/repositories/file?${params.toString()}`,
+        {
+          credentials: 'include',
+        },
       );
       const data = await response.json();
 
@@ -198,8 +219,8 @@ function App() {
           <h1>Understand any repository.</h1>
 
           <p className="subtitle">
-            Scan a public GitHub repository and explore its structure, files,
-            directories, and technology footprint.
+            Scan a public GitHub repository or use a server-side GitHub App
+            connection for private repository access.
           </p>
 
           <form className="scan-form" onSubmit={handleSubmit}>
@@ -219,17 +240,58 @@ function App() {
             </button>
           </form>
 
+          <div className="private-repository-options">
+            <label>
+              <input
+                type="checkbox"
+                checked={allowPrivateAccess}
+                onChange={() => setAllowPrivateAccess((value) => !value)}
+              />
+              Use GitHub App access for private repositories
+            </label>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                void fetch(`${API_URL}/api/github/auth/start`, {
+                  credentials: 'include',
+                })
+                  .then(async (response) => {
+                    const data = await response.json();
+                    if (!response.ok) {
+                      throw new Error(
+                        data.error ?? 'Unable to start GitHub connection',
+                      );
+                    }
+                    window.location.href =
+                      data.redirectUrl ?? `${API_URL}/api/github/auth/start`;
+                  })
+                  .catch((err) => {
+                    setError(
+                      err instanceof Error
+                        ? err.message
+                        : 'Unable to start GitHub connection',
+                    );
+                  });
+              }}
+            >
+              {isGitHubConnected ? 'GitHub Connected' : 'Connect GitHub'}
+            </button>
+          </div>
+
           <aside className="private-repository-note">
             <span className="private-repository-icon" aria-hidden="true">
               <LockKeyhole size={17} />
             </span>
             <span className="private-repository-copy">
-              <strong>Private repositories are in the works</strong>
+              <strong>Private repositories are supported</strong>
               <span>
-                VaultMap currently supports public GitHub repositories.
+                VaultMap validates GitHub App installation access before
+                scanning or reading private files.
               </span>
             </span>
-            <span className="private-repository-status">UNDER DEVELOPMENT</span>
+            <span className="private-repository-status">SECURE</span>
           </aside>
 
           {wakeup.phase === 'waking' && (

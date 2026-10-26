@@ -1,15 +1,16 @@
 import { RepositoryFileContent } from '@vaultmap/types';
 
-import { githubClient } from './client.js';
+import type { Octokit } from 'octokit';
 const SUPPORTED_ENCODING = 'base64' as const;
 
 export async function getRepositoryFile(
+  client: Octokit,
   owner: string,
   name: string,
   path: string,
   branch: string,
 ): Promise<RepositoryFileContent> {
-  const { data } = await githubClient.rest.repos.getContent({
+  const { data } = await client.rest.repos.getContent({
     owner,
     repo: name,
     path,

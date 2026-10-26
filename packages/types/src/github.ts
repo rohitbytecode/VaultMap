@@ -1,8 +1,10 @@
 export interface GitHubRepository {
+  id?: number;
   owner: string;
   name: string;
   url: string;
   defaultBranch: string;
+  private?: boolean;
 }
 
 export interface GitHubTreeEntry {
