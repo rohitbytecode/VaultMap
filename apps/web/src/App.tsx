@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Copy, Check, LockKeyhole, CircleCheck, CircleX } from 'lucide-react';
 
 import type {
@@ -210,43 +210,53 @@ function App() {
     }
   }
 
-  async function handleFileSelect(path: string) {
-    if (!result) return;
+  const handleFileSelect = useCallback(
+    async (path: string) => {
+      if (!result) return;
 
-    setIsLoadingFile(true);
-    setSelectedFile(null);
-    setError('');
+      setIsLoadingFile(true);
+      setSelectedFile(null);
+      setError('');
 
-    const { owner, name, defaultBranch } = result.snapshot.repository;
+      const { owner, name, defaultBranch } = result.snapshot.repository;
 
-    try {
-      const params = new URLSearchParams({
-        owner,
-        repository: name,
-        path,
-        branch: defaultBranch,
-      });
+      try {
+        const params = new URLSearchParams({
+          owner,
+          repository: name,
+          path,
+          branch: defaultBranch,
+        });
 
-      const response = await fetch(
-        `${API_URL}/api/repositories/file?${params.toString()}`,
-        {
-          headers: getAuthHeaders(),
-          credentials: 'include',
-        },
-      );
-      const data = await response.json();
+        const response = await fetch(
+          `${API_URL}/api/repositories/file?${params.toString()}`,
+          {
+            headers: getAuthHeaders(),
+            credentials: 'include',
+          },
+        );
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error ?? 'Failed to load file');
+        if (!response.ok) {
+          throw new Error(data.error ?? 'Failed to load file');
+        }
+
+        setSelectedFile(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load file');
+      } finally {
+        setIsLoadingFile(false);
       }
+    },
+    [result],
+  );
 
-      setSelectedFile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load file');
-    } finally {
-      setIsLoadingFile(false);
-    }
-  }
+  const handleGraphFileSelect = useCallback(
+    (path: string) => {
+      void handleFileSelect(path);
+    },
+    [handleFileSelect],
+  );
 
   async function handleConnectGitHub() {
     setGithubConnecting(true);
@@ -473,7 +483,7 @@ function App() {
 
             <RepositoryGraphCanvas
               tree={result.tree}
-              onFileSelect={(path) => void handleFileSelect(path)}
+              onFileSelect={handleGraphFileSelect}
             />
 
             <div className="content-grid">
