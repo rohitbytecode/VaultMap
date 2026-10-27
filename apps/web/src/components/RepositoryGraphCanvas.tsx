@@ -6,36 +6,57 @@ import {
   ReactFlow,
   Handle,
   Position,
-  MarkerType,
   useEdgesState,
   useNodesState,
   type Edge,
   type Node,
   type NodeProps,
 } from '@xyflow/react';
+import {
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  forceX,
+  forceY,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from 'd3-force';
 import '@xyflow/react/dist/style.css';
 
 import type { RepositoryTreeNode } from '@vaultmap/types';
-import {
-  buildRepositoryGraph,
-  type RepositoryGraphNode,
-} from '../utils/repositoryGraph';
+import { buildRepositoryGraph } from '../utils/repositoryGraph';
 
 interface GraphNodeData extends Record<string, unknown> {
   label: string;
   path: string;
   type: 'file' | 'directory';
-  extension: string | null;
-  size?: number;
-  depth: number;
-  parentId: string | null;
   color: string;
-  isCluster?: boolean;
-  match?: boolean;
-  onSelectFile?: (path: string) => void;
+  size?: number;
+  match: boolean;
+  onSelectFile: (path: string) => void;
 }
 
-type FlowNode = Node<GraphNodeData>;
+type FlowNode = Node<GraphNodeData, 'repositoryNode'>;
+
+interface SimNode extends SimulationNodeDatum {
+  id: string;
+  path: string;
+  name: string;
+  type: 'file' | 'directory';
+  parentId: string | null;
+  group: string;
+  color: string;
+  width: number;
+  height: number;
+  size?: number;
+}
+
+interface SimLink extends SimulationLinkDatum<SimNode> {
+  id: string;
+  source: string | SimNode;
+  target: string | SimNode;
+}
 
 const COLORS = [
   '#34d399',
@@ -48,53 +69,45 @@ const COLORS = [
   '#a3e635',
 ];
 
-const NODE_WIDTH = 190;
-const NODE_HEIGHT = 38;
-const COLUMN_GAP = 22;
-const ROW_GAP = 12;
-const CLUSTER_PADDING = 24;
-const CLUSTER_HEADER = 54;
-const CLUSTER_GAP = 34;
-const MAX_COLUMNS = 4;
-const TARGET_ROW_WIDTH = 2800;
-
-function getColor(value: string): string {
+function colorFor(value: string): string {
   let hash = 0;
-
   for (const char of value) {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   }
-
   return COLORS[hash % COLORS.length];
 }
 
-function GraphEntryNode({ data, selected }: NodeProps<FlowNode>) {
+function topLevelGroup(path: string): string {
+  return path.split('/')[0] || 'root';
+}
+
+function GraphNodeView({ data, selected }: NodeProps<FlowNode>) {
   const isDirectory = data.type === 'directory';
 
   return (
     <div
       className={[
-        'graph-node',
-        isDirectory ? 'graph-node-directory' : 'graph-node-file',
-        selected ? 'graph-node-selected' : '',
-        data.match === false ? 'graph-node-dimmed' : '',
+        'force-graph-node',
+        isDirectory ? 'force-graph-directory' : 'force-graph-file',
+        selected ? 'force-graph-selected' : '',
+        !data.match ? 'force-graph-dimmed' : '',
       ].join(' ')}
       style={{ '--node-color': data.color } as React.CSSProperties}
       title={data.path}
     >
       <Handle type="target" position={Position.Left} />
 
-      <span className={isDirectory ? 'graph-folder-dot' : 'graph-file-dot'} />
+      <span className="force-graph-dot" />
 
       {isDirectory ? (
-        <span className="graph-node-label">{data.label}</span>
+        <span className="force-graph-label">{data.label}</span>
       ) : (
         <button
           type="button"
-          className="graph-file-label"
+          className="force-graph-label force-graph-file-button"
           onClick={(event) => {
             event.stopPropagation();
-            data.onSelectFile?.(data.path);
+            data.onSelectFile(data.path);
           }}
           title={`Open ${data.path}`}
         >
@@ -102,269 +115,12 @@ function GraphEntryNode({ data, selected }: NodeProps<FlowNode>) {
         </button>
       )}
 
-      {isDirectory && <span className="graph-node-kind">DIR</span>}
-
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
 
-function DirectoryCluster({ data }: NodeProps<FlowNode>) {
-  return (
-    <div
-      className="graph-cluster"
-      style={{ '--cluster-color': data.color } as React.CSSProperties}
-    >
-      <div className="graph-cluster-header">
-        <span className="graph-cluster-indicator" />
-        <span className="graph-cluster-title">{data.label}</span>
-        <span className="graph-cluster-count">{data.size ?? 0} items</span>
-      </div>
-      <div className="graph-cluster-path">{data.path}</div>
-    </div>
-  );
-}
-
-const nodeTypes = {
-  repositoryNode: GraphEntryNode,
-  directoryCluster: DirectoryCluster,
-};
-
-interface PositionedCluster {
-  root: RepositoryTreeNode;
-  nodes: RepositoryGraphNode[];
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color: string;
-}
-
-function collectSubtree(root: RepositoryTreeNode): RepositoryGraphNode[] {
-  const result: RepositoryGraphNode[] = [];
-  const stack = [{ node: root, depth: 0, parentId: null as string | null }];
-
-  while (stack.length) {
-    const current = stack.pop();
-    if (!current) continue;
-
-    const { node, depth, parentId } = current;
-
-    result.push({
-      id: node.path,
-      name: node.name,
-      path: node.path,
-      type: node.type,
-      extension:
-        node.extension ??
-        (node.type === 'file' && node.name.includes('.')
-          ? node.name.slice(node.name.lastIndexOf('.'))
-          : null),
-      size: node.size,
-      depth,
-      parentId,
-    });
-
-    if (node.type === 'directory') {
-      for (let index = (node.children?.length ?? 0) - 1; index >= 0; index--) {
-        const child = node.children[index];
-        if (child) {
-          stack.push({
-            node: child,
-            depth: depth + 1,
-            parentId: node.path,
-          });
-        }
-      }
-    }
-  }
-
-  return result;
-}
-
-function getClusterDimensions(nodes: RepositoryGraphNode[]) {
-  const columns = Math.min(MAX_COLUMNS, Math.max(1, nodes.length));
-  const rows = Math.ceil(nodes.length / MAX_COLUMNS);
-
-  return {
-    width:
-      CLUSTER_PADDING * 2 +
-      columns * NODE_WIDTH +
-      Math.max(0, columns - 1) * COLUMN_GAP,
-    height:
-      CLUSTER_HEADER +
-      CLUSTER_PADDING * 2 +
-      Math.max(1, rows) * NODE_HEIGHT +
-      Math.max(0, rows - 1) * ROW_GAP,
-  };
-}
-
-function buildClusterLayout(tree: RepositoryTreeNode[]) {
-  const roots = tree.length ? tree : [];
-  const positioned: PositionedCluster[] = roots.map((root) => {
-    const nodes = collectSubtree(root);
-    const dimensions = getClusterDimensions(nodes);
-
-    return {
-      root,
-      nodes,
-      ...dimensions,
-      x: 0,
-      y: 0,
-      color: getColor(root.path),
-    };
-  });
-
-  // Place clusters in rows, keeping the map compact rather than one tall tree.
-  const targetRowWidth = TARGET_ROW_WIDTH;
-  let x = 0;
-  let y = 0;
-  let rowHeight = 0;
-
-  for (const cluster of positioned) {
-    if (x > 0 && x + cluster.width > targetRowWidth) {
-      x = 0;
-      y += rowHeight + CLUSTER_GAP;
-      rowHeight = 0;
-    }
-
-    cluster.x = x;
-    cluster.y = y;
-    x += cluster.width + CLUSTER_GAP;
-    rowHeight = Math.max(rowHeight, cluster.height);
-  }
-
-  return positioned;
-}
-
-function buildLayoutNodes(
-  clusters: PositionedCluster[],
-  onSelectFile: (path: string) => void,
-  query: string,
-): FlowNode[] {
-  const result: FlowNode[] = [];
-  const normalizedQuery = query.trim().toLowerCase();
-
-  for (const cluster of clusters) {
-    const clusterPath = cluster.root.path;
-    const clusterId = `__cluster__:${clusterPath}`;
-
-    result.push({
-      id: clusterId,
-      type: 'directoryCluster',
-      position: { x: cluster.x, y: cluster.y },
-      draggable: false,
-      selectable: false,
-      connectable: false,
-      zIndex: -1,
-      data: {
-        label: cluster.root.name,
-        path: clusterPath,
-        type: 'directory',
-        extension: null,
-        depth: 0,
-        parentId: null,
-        color: cluster.color,
-        size: cluster.nodes.length,
-        isCluster: true,
-      },
-      style: {
-        width: cluster.width,
-        height: cluster.height,
-        zIndex: -1,
-      },
-    });
-
-    // Single grid per cluster, in tree (pre-order) sequence so children
-    // follow their parent directory.
-    cluster.nodes.forEach((node, index) => {
-      const column = index % MAX_COLUMNS;
-      const row = Math.floor(index / MAX_COLUMNS);
-
-      const x =
-        cluster.x + CLUSTER_PADDING + column * (NODE_WIDTH + COLUMN_GAP);
-
-      const y =
-        cluster.y +
-        CLUSTER_HEADER +
-        CLUSTER_PADDING +
-        row * (NODE_HEIGHT + ROW_GAP);
-
-      const matches =
-        !normalizedQuery ||
-        node.name.toLowerCase().includes(normalizedQuery) ||
-        node.path.toLowerCase().includes(normalizedQuery);
-
-      result.push({
-        id: node.id,
-        type: 'repositoryNode',
-        position: { x, y },
-        data: {
-          label: node.name,
-          path: node.path,
-          type: node.type,
-          extension: node.extension,
-          size: node.size,
-          depth: node.depth,
-          parentId: node.parentId,
-          color:
-            node.type === 'directory' ? getColor(node.path) : cluster.color,
-          match: matches,
-          onSelectFile,
-        },
-        style: {
-          width: NODE_WIDTH,
-          opacity: matches ? 1 : 0.22,
-        },
-      });
-    });
-  }
-
-  return result;
-}
-
-function buildLayoutEdges(
-  edges: { id: string; source: string; target: string }[],
-  query: string,
-  nodes: FlowNode[],
-): Edge[] {
-  const normalizedQuery = query.trim().toLowerCase();
-  const matchingIds = new Set(
-    nodes
-      .filter(
-        (node) =>
-          !normalizedQuery ||
-          node.data.label.toLowerCase().includes(normalizedQuery) ||
-          node.data.path.toLowerCase().includes(normalizedQuery),
-      )
-      .map((node) => node.id),
-  );
-
-  return edges.map((edge) => {
-    const highlighted =
-      !normalizedQuery ||
-      matchingIds.has(edge.source) ||
-      matchingIds.has(edge.target);
-
-    return {
-      ...edge,
-      type: 'smoothstep',
-      animated: false,
-      style: {
-        stroke: highlighted
-          ? 'rgba(129, 140, 248, 0.42)'
-          : 'rgba(129, 140, 248, 0.08)',
-        strokeWidth: highlighted ? 1.25 : 0.7,
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 8,
-        height: 8,
-        color: 'rgba(129, 140, 248, 0.35)',
-      },
-    };
-  });
-}
+const nodeTypes = { repositoryNode: GraphNodeView };
 
 interface RepositoryGraphCanvasProps {
   tree: RepositoryTreeNode[];
@@ -377,46 +133,221 @@ export default function RepositoryGraphCanvas({
 }: RepositoryGraphCanvasProps) {
   const [query, setQuery] = useState('');
 
+  // Keep the latest callback in a ref so the layout doesn't re-run
+  // when the parent passes a new function identity.
+  const onFileSelectRef = useRef(onFileSelect);
+  useEffect(() => {
+    onFileSelectRef.current = onFileSelect;
+  }, [onFileSelect]);
+
+  const handleSelectFile = useCallback((path: string) => {
+    onFileSelectRef.current(path);
+  }, []);
+
   const graph = useMemo(() => buildRepositoryGraph(tree), [tree]);
-  const clusters = useMemo(() => buildClusterLayout(tree), [tree]);
 
-  const nodes = useMemo(
-    () => buildLayoutNodes(clusters, onFileSelect, query),
-    [clusters, onFileSelect, query],
-  );
+  const layout = useMemo(() => {
+    const simulationNodes: SimNode[] = graph.nodes.map((node) => {
+      const group = topLevelGroup(node.path);
 
-  const edges = useMemo(
-    () => buildLayoutEdges(graph.edges, query, nodes),
-    [graph.edges, query, nodes],
-  );
+      return {
+        id: node.id,
+        path: node.path,
+        name: node.name,
+        type: node.type,
+        parentId: node.parentId,
+        group,
+        color: colorFor(group),
+        width: node.type === 'directory' ? 154 : 128,
+        height: node.type === 'directory' ? 32 : 26,
+        size: node.size,
+        x: 0,
+        y: 0,
+      };
+    });
+
+    const nodeById = new Map(simulationNodes.map((node) => [node.id, node]));
+
+    // Give each top-level directory its own starting region.
+    const groups = [...new Set(simulationNodes.map((node) => node.group))];
+    const groupCenters = new Map<string, { x: number; y: number }>();
+    const orbit = Math.max(260, groups.length * 34);
+
+    groups.forEach((group, index) => {
+      const angle = (index / Math.max(1, groups.length)) * Math.PI * 2;
+      groupCenters.set(group, {
+        x: Math.cos(angle) * orbit,
+        y: Math.sin(angle) * orbit * 0.72,
+      });
+    });
+
+    simulationNodes.forEach((node, index) => {
+      const center = groupCenters.get(node.group) ?? { x: 0, y: 0 };
+      const angle = (index * 2.399963) % (Math.PI * 2);
+      const radius = 18 + (index % 7) * 9;
+
+      node.x = center.x + Math.cos(angle) * radius;
+      node.y = center.y + Math.sin(angle) * radius;
+    });
+
+    const simulationLinks: SimLink[] = graph.edges
+      .filter((edge) => nodeById.has(edge.source) && nodeById.has(edge.target))
+      .map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+      }));
+
+    const linkForce = forceLink<SimNode, SimLink>(simulationLinks)
+      .id((node) => node.id)
+      .distance((link) => {
+        const source = link.source as SimNode;
+        return source.parentId === null ? 115 : 72;
+      })
+      .strength(0.8);
+
+    const simulation = forceSimulation<SimNode>(simulationNodes)
+      .force('link', linkForce)
+      .force(
+        'charge',
+        forceManyBody<SimNode>().strength((node) =>
+          node.type === 'directory' ? -210 : -95,
+        ),
+      )
+      .force(
+        'collide',
+        forceCollide<SimNode>()
+          .radius((node) => Math.max(node.width, node.height) * 0.58)
+          .iterations(2),
+      )
+      .force(
+        'x',
+        forceX<SimNode>(
+          (node) => groupCenters.get(node.group)?.x ?? 0,
+        ).strength(0.055),
+      )
+      .force(
+        'y',
+        forceY<SimNode>(
+          (node) => groupCenters.get(node.group)?.y ?? 0,
+        ).strength(0.055),
+      )
+      .stop();
+
+    // Run synchronously so the initial graph is positioned before rendering.
+    for (let tick = 0; tick < 260; tick += 1) {
+      simulation.tick();
+    }
+
+    return {
+      nodes: simulationNodes.map((node): FlowNode => ({
+        id: node.id,
+        type: 'repositoryNode',
+        position: {
+          x: (node.x ?? 0) - node.width / 2,
+          y: (node.y ?? 0) - node.height / 2,
+        },
+        data: {
+          label: node.name,
+          path: node.path,
+          type: node.type,
+          color: node.color,
+          size: node.size,
+          match: true,
+          onSelectFile: handleSelectFile,
+        },
+        style: {
+          width: node.width,
+          height: node.height,
+        },
+      })),
+      edges: simulationLinks.map((link): Edge => ({
+        id: link.id,
+        source: typeof link.source === 'string' ? link.source : link.source.id,
+        target: typeof link.target === 'string' ? link.target : link.target.id,
+        type: 'straight',
+        style: {
+          stroke: 'rgba(139, 153, 180, 0.28)',
+          strokeWidth: 1,
+        },
+      })),
+    };
+  }, [graph, handleSelectFile]);
+
+  const searchedNodes = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+
+    return layout.nodes.map((node) => {
+      const matches =
+        !normalized ||
+        node.data.label.toLowerCase().includes(normalized) ||
+        node.data.path.toLowerCase().includes(normalized);
+
+      return {
+        ...node,
+        data: { ...node.data, match: matches },
+        style: {
+          ...node.style,
+          opacity: matches ? 1 : 0.14,
+        },
+      };
+    });
+  }, [layout.nodes, query]);
+
+  const searchedEdges = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+
+    if (!normalized) {
+      return layout.edges;
+    }
+
+    const matchingIds = new Set(
+      searchedNodes.filter((node) => node.data.match).map((node) => node.id),
+    );
+
+    return layout.edges.map((edge) => {
+      const highlighted =
+        matchingIds.has(edge.source) || matchingIds.has(edge.target);
+
+      return {
+        ...edge,
+        style: {
+          stroke: highlighted
+            ? 'rgba(165, 180, 252, 0.78)'
+            : 'rgba(139, 153, 180, 0.045)',
+          strokeWidth: highlighted ? 1.5 : 0.6,
+        },
+      };
+    });
+  }, [layout.edges, query, searchedNodes]);
 
   const [flowNodes, setFlowNodes, onNodesChange] =
-    useNodesState<FlowNode>(nodes);
-  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState<Edge>(edges);
+    useNodesState<FlowNode>(searchedNodes);
+  const [flowEdges, setFlowEdges, onEdgesChange] =
+    useEdgesState<Edge>(searchedEdges);
 
   // Tracks which layout the current positions belong to, so dragged
-  // positions survive search/callback updates but reset when the tree changes.
-  const layoutRef = useRef<PositionedCluster[] | null>(null);
+  // positions survive search updates but reset when the tree changes.
+  const layoutRef = useRef<typeof layout | null>(null);
 
   useEffect(() => {
-    const sameLayout = layoutRef.current === clusters;
-    layoutRef.current = clusters;
+    const sameLayout = layoutRef.current === layout;
+    layoutRef.current = layout;
 
     setFlowNodes((previous) => {
-      if (!sameLayout) return nodes;
+      if (!sameLayout) return searchedNodes;
 
-      const positions = new Map(
+      const previousPositions = new Map(
         previous.map((node) => [node.id, node.position]),
       );
 
-      return nodes.map((node) =>
-        node.data.isCluster
-          ? node
-          : { ...node, position: positions.get(node.id) ?? node.position },
-      );
+      return searchedNodes.map((node) => ({
+        ...node,
+        position: previousPositions.get(node.id) ?? node.position,
+      }));
     });
-    setFlowEdges(edges);
-  }, [clusters, nodes, edges, setFlowNodes, setFlowEdges]);
+    setFlowEdges(searchedEdges);
+  }, [layout, searchedNodes, searchedEdges, setFlowNodes, setFlowEdges]);
 
   const isValidConnection = useCallback(() => false, []);
 
@@ -427,8 +358,7 @@ export default function RepositoryGraphCanvas({
           <p className="graph-eyebrow">REPOSITORY ANALYSIS</p>
           <h3>Graph Overview</h3>
           <p className="graph-description">
-            Explore your repository through compact, color-coded directory
-            clusters.
+            Explore repository files as an interactive, force-directed map.
           </p>
         </div>
 
@@ -460,7 +390,7 @@ export default function RepositoryGraphCanvas({
           No repository nodes were found in this scan.
         </div>
       ) : (
-        <div className="graph-canvas">
+        <div className="graph-canvas force-graph-canvas">
           <ReactFlow
             nodes={flowNodes}
             edges={flowEdges}
@@ -469,26 +399,23 @@ export default function RepositoryGraphCanvas({
             onEdgesChange={onEdgesChange}
             isValidConnection={isValidConnection}
             fitView
-            fitViewOptions={{ padding: 0.12, maxZoom: 0.8 }}
+            fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
             minZoom={0.04}
-            maxZoom={2}
+            maxZoom={2.5}
             nodesDraggable
             nodesConnectable={false}
-            elementsSelectable
             onlyRenderVisibleElements
-            defaultEdgeOptions={{ type: 'smoothstep' }}
             proOptions={{ hideAttribution: true }}
           >
-            <Background color="#202536" gap={22} size={1} />
+            <Background color="#263044" gap={24} size={1} />
             <Controls showInteractive={false} />
             <MiniMap
               pannable
               zoomable
-              nodeColor={(node) => {
-                const data = node.data as GraphNodeData;
-                return data.isCluster ? '#161d2c' : data.color;
-              }}
-              maskColor="rgba(5, 7, 14, 0.76)"
+              nodeColor={(node) =>
+                String((node.data as GraphNodeData).color ?? '#818cf8')
+              }
+              maskColor="rgba(5, 7, 14, 0.78)"
             />
           </ReactFlow>
         </div>
