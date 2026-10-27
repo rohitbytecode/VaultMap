@@ -1254,3 +1254,238 @@ h1 {
     padding: 20px 16px;
   }
 }
+
+/* Repository Graph Canvas */
+
+.graph-panel {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid rgba(129, 140, 248, 0.18);
+  border-radius: 16px;
+  background: #080b12;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
+
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    radial-gradient(
+      ellipse at 0% 0%,
+      rgba(99, 102, 241, 0.12),
+      transparent 65%
+    ),
+    #0c101a;
+}
+
+.graph-toolbar h3 {
+  margin: 0;
+  color: #f4f6ff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.graph-eyebrow {
+  margin: 0 0 7px;
+  color: #818cf8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.graph-description {
+  margin: 7px 0 0;
+  color: #8b94a9;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.graph-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.graph-counts span {
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #cbd2e4;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-canvas {
+  width: 100%;
+  height: min(72vh, 760px);
+  min-height: 480px;
+  background-color: #080b12;
+  background-image: radial-gradient(
+    rgba(148, 163, 184, 0.13) 0.8px,
+    transparent 0.8px
+  );
+  background-size: 22px 22px;
+}
+
+.graph-canvas .react-flow {
+  background: transparent;
+}
+
+.graph-canvas .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: #111725;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.graph-canvas .react-flow__controls-button {
+  width: 30px;
+  height: 30px;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: #111725;
+  fill: #dce3f5;
+}
+
+.graph-canvas .react-flow__controls-button:hover {
+  background: #202a3d;
+}
+
+.graph-canvas .react-flow__controls-button svg {
+  fill: #dce3f5;
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.graph-canvas .react-flow__minimap {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 10px;
+  background: #101522;
+}
+
+.graph-canvas .react-flow__edge-path {
+  filter: drop-shadow(0 0 2px rgba(129, 140, 248, 0.12));
+}
+
+.graph-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--node-color) 48%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--node-color) 7%, #0d111c);
+  color: #e5eaf7;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.graph-node-directory {
+  min-height: 38px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--node-color) 11%, #0d111c);
+}
+
+.graph-node:hover,
+.graph-node-selected {
+  border-color: var(--node-color);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--node-color) 16%, transparent);
+}
+
+.graph-folder-dot,
+.graph-file-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--node-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--node-color) 55%, transparent);
+}
+
+.graph-file-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.graph-node-label,
+.graph-file-label {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-family:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-node-label {
+  font-weight: 700;
+}
+
+.graph-file-label {
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.graph-file-label:hover {
+  color: var(--node-color);
+}
+
+.graph-node-kind {
+  margin-left: auto;
+  color: var(--node-color);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.graph-node .react-flow__handle {
+  width: 5px;
+  height: 5px;
+  border: 1px solid #0b0f18;
+  background: var(--node-color);
+}
+
+.graph-empty {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  color: #8b94a9;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .graph-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .graph-canvas {
+    height: 65vh;
+    min-height: 400px;
+  }
+
+  .graph-counts {
+    gap: 6px;
+  }
+}

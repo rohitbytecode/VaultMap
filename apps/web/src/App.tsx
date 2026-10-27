@@ -9,6 +9,7 @@ import type {
 import RepositoryTree from './components/RepositoryTree';
 import FileViewer from './components/FileViewer';
 import { useBackendWakeup } from './hooks/useBackendWakeup';
+import RepositoryGraphCanvas from './components/RepositoryGraphCanvas';
 
 import './App.css';
 
@@ -469,6 +470,11 @@ function App() {
                 <strong>{formatFileSize(result.statistics.totalSize)}</strong>
               </article>
             </div>
+
+            <RepositoryGraphCanvas
+              tree={result.tree}
+              onFileSelect={(path) => void handleFileSelect(path)}
+            />
 
             <div className="content-grid">
               <section className="panel">
