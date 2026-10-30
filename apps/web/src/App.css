@@ -1770,3 +1770,137 @@ h1 {
     height: 65vh;
   }
 }
+
+/* ─── Graph node clarity and inspection ─────────────── */
+
+.force-graph-node {
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 7px;
+}
+
+.force-graph-directory {
+  border-width: 1.5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--node-color) 17%, #0b101a);
+  box-shadow: inset 3px 0 0 var(--node-color);
+}
+
+.force-graph-file {
+  background: #101522;
+}
+
+.force-graph-icon {
+  flex: 0 0 auto;
+  color: var(--node-color);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.force-graph-directory .force-graph-icon {
+  font-size: 13px;
+}
+
+.force-graph-label {
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.force-graph-directory .force-graph-label {
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.force-graph-extension {
+  flex: 0 0 auto;
+  padding: 2px 4px;
+  border: 1px solid color-mix(in srgb, var(--node-color) 25%, transparent);
+  border-radius: 3px;
+  color: var(--node-color);
+  font-family: ui-monospace, monospace;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.force-graph-selected {
+  z-index: 10;
+  border-color: var(--node-color);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--node-color) 25%, transparent),
+    0 0 18px color-mix(in srgb, var(--node-color) 22%, transparent);
+}
+
+.graph-inspector {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0c111c;
+}
+
+.graph-inspector-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.graph-inspector-eyebrow {
+  color: #818cf8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.graph-inspector h4 {
+  margin: 5px 0 0;
+  color: #f1f5ff;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.graph-inspector-close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: #141a28;
+  color: #dce3f5;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.graph-inspector-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  font-size: 11px;
+}
+
+.graph-inspector-row > span {
+  color: #7f8aa1;
+}
+
+.graph-inspector-row > code,
+.graph-inspector-row > strong {
+  min-width: 0;
+  color: #dce3f5;
+  overflow-wrap: anywhere;
+}
+
+.graph-inspector-row > code {
+  font-size: 10px;
+}
+
+.graph-inspector-open {
+  justify-self: start;
+  padding: 8px 12px;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  border-radius: 6px;
+  background: rgba(129, 140, 248, 0.1);
+  color: #c7d2fe;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}

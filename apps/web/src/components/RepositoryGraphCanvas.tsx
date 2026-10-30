@@ -33,6 +33,8 @@ interface GraphNodeData extends Record<string, unknown> {
   type: 'file' | 'directory';
   color: string;
   size?: number;
+  extension: string | null;
+  parentId: string | null;
   match: boolean;
   onSelectFile: (path: string) => void;
 }
@@ -44,6 +46,7 @@ interface SimNode extends SimulationNodeDatum {
   path: string;
   name: string;
   type: 'file' | 'directory';
+  extension: string | null;
   parentId: string | null;
   group: string;
   color: string;
@@ -83,6 +86,7 @@ function topLevelGroup(path: string): string {
 
 function GraphNodeView({ data, selected }: NodeProps<FlowNode>) {
   const isDirectory = data.type === 'directory';
+  const extension = data.extension?.replace(/^\./, '').toUpperCase();
 
   return (
     <div
@@ -91,28 +95,38 @@ function GraphNodeView({ data, selected }: NodeProps<FlowNode>) {
         isDirectory ? 'force-graph-directory' : 'force-graph-file',
         selected ? 'force-graph-selected' : '',
         !data.match ? 'force-graph-dimmed' : '',
-      ].join(' ')}
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{ '--node-color': data.color } as React.CSSProperties}
       title={data.path}
     >
       <Handle type="target" position={Position.Left} />
 
-      <span className="force-graph-dot" />
+      <span className="force-graph-icon" aria-hidden="true">
+        {isDirectory ? '▰' : '◇'}
+      </span>
 
       {isDirectory ? (
         <span className="force-graph-label">{data.label}</span>
       ) : (
-        <button
-          type="button"
-          className="force-graph-label force-graph-file-button"
-          onClick={(event) => {
-            event.stopPropagation();
-            data.onSelectFile(data.path);
-          }}
-          title={`Open ${data.path}`}
-        >
-          {data.label}
-        </button>
+        <>
+          <button
+            type="button"
+            className="force-graph-label force-graph-file-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              data.onSelectFile(data.path);
+            }}
+            title={`Open ${data.path}`}
+          >
+            {data.label}
+          </button>
+
+          {extension && (
+            <span className="force-graph-extension">{extension}</span>
+          )}
+        </>
       )}
 
       <Handle type="source" position={Position.Right} />
@@ -132,6 +146,7 @@ export default function RepositoryGraphCanvas({
   onFileSelect,
 }: RepositoryGraphCanvasProps) {
   const [query, setQuery] = useState('');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   // Keep the latest callback in a ref so the layout doesn't re-run
   // when the parent passes a new function identity.
@@ -155,6 +170,7 @@ export default function RepositoryGraphCanvas({
         path: node.path,
         name: node.name,
         type: node.type,
+        extension: node.extension ?? null,
         parentId: node.parentId,
         group,
         color: colorFor(group),
@@ -253,6 +269,8 @@ export default function RepositoryGraphCanvas({
           type: node.type,
           color: node.color,
           size: node.size,
+          extension: node.extension,
+          parentId: node.parentId,
           match: true,
           onSelectFile: handleSelectFile,
         },
@@ -350,6 +368,24 @@ export default function RepositoryGraphCanvas({
   }, [layout, searchedNodes, searchedEdges, setFlowNodes, setFlowEdges]);
 
   const isValidConnection = useCallback(() => false, []);
+  const selectedNode = flowNodes.find((node) => node.id === selectedNodeId);
+  const highlightedEdges = selectedNode
+    ? flowEdges.map((edge) => {
+        const isRelated =
+          edge.source === selectedNode.id || edge.target === selectedNode.id;
+
+        return isRelated
+          ? {
+              ...edge,
+              style: {
+                ...edge.style,
+                stroke: selectedNode.data.color,
+                strokeWidth: 2.5,
+              },
+            }
+          : edge;
+      })
+    : flowEdges;
 
   return (
     <section className="graph-panel">
@@ -390,35 +426,100 @@ export default function RepositoryGraphCanvas({
           No repository nodes were found in this scan.
         </div>
       ) : (
-        <div className="graph-canvas force-graph-canvas">
-          <ReactFlow
-            nodes={flowNodes}
-            edges={flowEdges}
-            nodeTypes={nodeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            isValidConnection={isValidConnection}
-            fitView
-            fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
-            minZoom={0.04}
-            maxZoom={2.5}
-            nodesDraggable
-            nodesConnectable={false}
-            onlyRenderVisibleElements
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background color="#263044" gap={24} size={1} />
-            <Controls showInteractive={false} />
-            <MiniMap
-              pannable
-              zoomable
-              nodeColor={(node) =>
-                String((node.data as GraphNodeData).color ?? '#818cf8')
-              }
-              maskColor="rgba(5, 7, 14, 0.78)"
-            />
-          </ReactFlow>
-        </div>
+        <>
+          <div className="graph-canvas force-graph-canvas">
+            <ReactFlow
+              nodes={flowNodes}
+              edges={highlightedEdges}
+              nodeTypes={nodeTypes}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+              onPaneClick={() => setSelectedNodeId(null)}
+              isValidConnection={isValidConnection}
+              fitView
+              fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
+              minZoom={0.04}
+              maxZoom={2.5}
+              nodesDraggable
+              nodesConnectable={false}
+              onlyRenderVisibleElements
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background color="#263044" gap={24} size={1} />
+              <Controls showInteractive={false} />
+              <MiniMap
+                pannable
+                zoomable
+                nodeColor={(node) =>
+                  String((node.data as GraphNodeData).color ?? '#818cf8')
+                }
+                maskColor="rgba(5, 7, 14, 0.78)"
+              />
+            </ReactFlow>
+          </div>
+          {selectedNode && (
+            <aside className="graph-inspector">
+              <div className="graph-inspector-heading">
+                <div>
+                  <span className="graph-inspector-eyebrow">
+                    {selectedNode.data.type === 'directory'
+                      ? 'DIRECTORY'
+                      : 'FILE'}
+                  </span>
+                  <h4>{selectedNode.data.label}</h4>
+                </div>
+
+                <button
+                  type="button"
+                  className="graph-inspector-close"
+                  onClick={() => setSelectedNodeId(null)}
+                  aria-label="Close node details"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="graph-inspector-row">
+                <span>Path</span>
+                <code>{selectedNode.data.path}</code>
+              </div>
+
+              <div className="graph-inspector-row">
+                <span>Type</span>
+                <strong>{selectedNode.data.type}</strong>
+              </div>
+
+              {selectedNode.data.extension && (
+                <div className="graph-inspector-row">
+                  <span>Extension</span>
+                  <strong>{selectedNode.data.extension}</strong>
+                </div>
+              )}
+
+              {selectedNode.data.size !== undefined && (
+                <div className="graph-inspector-row">
+                  <span>Size</span>
+                  <strong>
+                    {selectedNode.data.size.toLocaleString()} bytes
+                  </strong>
+                </div>
+              )}
+
+              {selectedNode.data.type === 'file' && (
+                <button
+                  type="button"
+                  className="graph-inspector-open"
+                  onClick={() =>
+                    onFileSelectRef.current(selectedNode.data.path)
+                  }
+                >
+                  Open file viewer
+                </button>
+              )}
+            </aside>
+          )}
+        </>
       )}
     </section>
   );
