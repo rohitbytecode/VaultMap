@@ -58,13 +58,15 @@ function verifySignature(value: string, signature: string): boolean {
 function parseCookies(cookieHeader?: string): Record<string, string> {
   if (!cookieHeader) return {};
 
-  return cookieHeader.split(';').reduce<Record<string, string>>((acc, entry) => {
-    const [name, ...rest] = entry.trim().split('=');
-    if (name && rest.length > 0) {
-      acc[name] = decodeURIComponent(rest.join('='));
-    }
-    return acc;
-  }, {});
+  return cookieHeader
+    .split(';')
+    .reduce<Record<string, string>>((acc, entry) => {
+      const [name, ...rest] = entry.trim().split('=');
+      if (name && rest.length > 0) {
+        acc[name] = decodeURIComponent(rest.join('='));
+      }
+      return acc;
+    }, {});
 }
 
 // ─── Stateless Session Tokens ───────────────────────────────────────────────
@@ -98,7 +100,10 @@ export function verifySessionToken(token?: string): string | null {
     ) as { userId?: string; expiresAt?: number };
 
     if (!payload.userId || typeof payload.userId !== 'string') return null;
-    if (typeof payload.expiresAt === 'number' && Date.now() > payload.expiresAt) {
+    if (
+      typeof payload.expiresAt === 'number' &&
+      Date.now() > payload.expiresAt
+    ) {
       return null;
     }
 
@@ -110,9 +115,7 @@ export function verifySessionToken(token?: string): string | null {
 
 // ─── Session Retrieval ───────────────────────────────────────────────────────
 
-export function getSessionUserId(
-  req: Pick<Request, 'headers'>,
-): string | null {
+export function getSessionUserId(req: Pick<Request, 'headers'>): string | null {
   // 1. Authorization header: "Bearer <token>"
   const authHeader = req.headers.authorization;
   if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {

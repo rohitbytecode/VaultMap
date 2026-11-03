@@ -171,7 +171,12 @@ githubRouter.get('/auth/callback', async (req, res) => {
   let installId: number | null = null;
   if (hasInstallationId) {
     installId = Number(installation_id);
-    if (!registeredAny && Number.isInteger(installId) && installId > 0 && githubApp) {
+    if (
+      !registeredAny &&
+      Number.isInteger(installId) &&
+      installId > 0 &&
+      githubApp
+    ) {
       try {
         const client = await githubApp.getInstallationOctokit(installId);
         const { data } =
@@ -234,7 +239,8 @@ githubRouter.get('/auth/callback', async (req, res) => {
       authenticated: true,
       userId,
       token: sessionToken,
-      installationId: installId ?? (hasInstallationId ? Number(installation_id) : undefined),
+      installationId:
+        installId ?? (hasInstallationId ? Number(installation_id) : undefined),
       registeredAny,
     });
     return;

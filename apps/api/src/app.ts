@@ -10,7 +10,10 @@ export const app = express();
 
 const corsOriginEnv = process.env.CORS_ORIGIN?.trim();
 const configuredOrigins = corsOriginEnv
-  ? corsOriginEnv.split(',').map((o) => o.trim()).filter(Boolean)
+  ? corsOriginEnv
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)
   : [];
 
 function isAllowedOrigin(originHeader: string | undefined): boolean {

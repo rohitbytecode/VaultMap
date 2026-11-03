@@ -3,7 +3,9 @@ import type { Octokit } from 'octokit';
 
 function normalizePrivateKey(privateKey: string): string {
   const cleaned = privateKey.trim().replace(/\\n/g, '\n').replace(/\r/g, '');
-  const headerMatch = cleaned.match(/(-----BEGIN[^-]+-----)(.+)(-----END[^-]+-----)/s);
+  const headerMatch = cleaned.match(
+    /(-----BEGIN[^-]+-----)(.+)(-----END[^-]+-----)/s,
+  );
   if (headerMatch && headerMatch[1] && headerMatch[2] && headerMatch[3]) {
     const header = headerMatch[1].trim();
     const body = headerMatch[2].replace(/\s+/g, '');
